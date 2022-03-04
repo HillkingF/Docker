@@ -28,7 +28,7 @@
 - Docker Swarm
 - CI\CD Jenkins
 
-
+------
 
 ## 一、Docker概述
 
@@ -189,6 +189,14 @@ Docker是内核级别的虚拟化，可以在一个物理机上运行很多的�
 
 
 
+
+
+
+
+
+
+------
+
 ## 二、Docker安装
 
 ### 1、Docker的基本组成
@@ -225,17 +233,144 @@ Docker hub这个仓库默认是国外的。
 
 
 
+
+
 ### 2、安装Docker
 
+> 环境准备
+
+1. 需要会一些Linux基础
+2. CentOS 7：将Docker安装到云服务器中
+3. 使用远程控制软件，连接远程服务器进行操作!  (Xshell在macos不能使用，因此下载FinallShell)
+
+> 环境查看
+
+查看云服务器系统内核版本信息：
+
+```
+3.10.0-1160.11.1.el7.x86_64   #系统内核是3.10以上的
+```
+
+系统版本：
+
+```
+[root@VM-24-12-centos ~]# cat /etc/os-release
+NAME="CentOS Linux"
+VERSION="7 (Core)"
+ID="centos"
+ID_LIKE="rhel fedora"
+VERSION_ID="7"
+PRETTY_NAME="CentOS Linux 7 (Core)"
+ANSI_COLOR="0;31"
+CPE_NAME="cpe:/o:centos:centos:7"
+HOME_URL="https://www.centos.org/"
+BUG_REPORT_URL="https://bugs.centos.org/"
+
+CENTOS_MANTISBT_PROJECT="CentOS-7"
+CENTOS_MANTISBT_PROJECT_VERSION="7"
+REDHAT_SUPPORT_PRODUCT="centos"
+REDHAT_SUPPORT_PRODUCT_VERSION="7"
+```
+
+> 具体安装
+
+将Docker安装到自己的云服务器中，帮助文档中有详细的安装步骤。
+
+![Docker安装文档入口](img/Docker%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3%E5%85%A5%E5%8F%A3.png)
+
+![选择对应的系统版本](img/%E9%80%89%E6%8B%A9%E5%AF%B9%E5%BA%94%E7%9A%84%E7%B3%BB%E7%BB%9F%E7%89%88%E6%9C%AC.png)
+
+上面这张图像开始就是正式的安装过程了。根据其说明，步骤总结如下：
+
+1. 首先卸载旧的版本 Uninstall old versions。下面的命令中我们实际操作时不加sudo：
+
+   ```
+   sudo yum remove docker \
+                     docker-client \
+                     docker-client-latest \
+                     docker-common \
+                     docker-latest \
+                     docker-latest-logrotate \
+                     docker-logrotat
+   ```
+
+2. 然后选择一种方法进行安装。文档中目前有三种安装方法，我们选择其中通过仓库安装的方法：Install using the repository：
+
+   - 首先安装基本环境——仓库：
+
+     ```cmake
+     安装仓库需要的安装包：
+     (sudo) yum install -y yum-utils
+     
+     设置仓库的镜像：
+     yum-config-manager \
+         --add-repo \ https://download.docker.com/linux/centos/docker-ce.repo    # [这个地址是国外的，不推荐]
+     
+      yum-config-manager --add-repo http://mirrors.aliyun.com/docker-ce/linux/centos/docker-ce.repo  #[这个镜像是国内的可以使用，这我们使用这个]
+     ```
+
+     ![镜像命令](img/%E9%95%9C%E5%83%8F%E5%91%BD%E4%BB%A4.png)
+
+   - 然后更新yum软件包索引
+
+     ```
+     yum makecache fast
+     ```
+
+   - 接下来安装docker—— Install Docker Engine：
+
+     ```cmake
+     # PS：docker-ce是社区版，ee是企业版。这里我们安装社区版
+     yum install docker-ce docker-ce-cli containerd.io
+     ```
+
+3. 安装完毕，下面启动docker并测试：
+
+   启动：
+
+   ```cmake
+   # 启动docker
+   systemctl start docker
+   # 查看版本信息
+   docker version
+   ```
+
+   测试“hello world”：
+
+   ```cmake
+   docker run hello-world
+   ```
+
+   ![运行效果](img/%E8%BF%90%E8%A1%8C%E6%95%88%E6%9E%9C.png)
+
+   在上面的运行结果图中：
+
+   - 红色的表示运行命令
+   - 蓝色的表示没有在本地找到图像，所以去拉取镜像
+   - 黄色的表示成功执行的结果（此时就表示docker安装成功了）
+
+   下面验证镜像是否被下载成功？即查看一下下载的hello-world镜像：
+
+   ```
+   docker images
+   ```
+
+   ![查看结果](img/%E4%B8%8B%E8%BD%BD%E7%9A%84hello-world%E9%95%9C%E5%83%8F.png)
 
 
 
+### 3、卸载docker
 
+完全卸载docker需要以下手动操作。
 
+```
+# 第一步：卸载依赖
+yum remove docker-ce docker-ce-cli containerd.io
 
+# 第二步：卸载资源环境
+rm -rf /var/lib/docker
+rm -rf /var/lib/containerd
+```
 
-
-
-
-
+上面的命令中：`/var/lib/docker` 是docker的默认工作路径。
 
