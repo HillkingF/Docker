@@ -473,7 +473,7 @@ docker 命令 --help  # 帮助命令（万能命令）
 
 ### 3.2 镜像命令
 
-**docker images : 查看所有本地主机上的镜像**
+#### **docker images : 查看所有本地主机上的镜像**
 
 ```shell
 [root@VM-24-12-centos ~]# docker images
@@ -508,7 +508,9 @@ feb5d9fea6a5
 
 ```
 
-**docker search 搜索镜像**
+
+
+#### **docker search 搜索镜像**
 
 ```shell
 [root@VM-24-12-centos ~]# docker search mysql
@@ -533,7 +535,9 @@ mysql     MySQL is a widely used, open-source relation…   12218     [OK]
 mariadb   MariaDB Server is a high performing open sou…   4690      [OK]   
 ```
 
-**docker pull 下载镜像**
+
+
+#### **docker pull 下载镜像**
 
 ```shell
 # 下载镜像 docker pull 镜像名[:tag]
@@ -552,15 +556,15 @@ c93a31315089: Pull complete
 3349ed800d44: Pull complete 
 6d01857ca4c1: Pull complete 
 4cc13890eda8: Pull complete 
-Digest: sha256:aeecae58035f3868bf4f00e5fc623630d8b438db9d05f4d8c6538deb14d4c31b  # 签名
+Digest: sha256:aeecae58035f3868bf4f00e5fc623630d8b438db9d05f4d8c6538deb14d4c31b  # 签名(防伪)
 Status: Downloaded newer image for mysql:latest
 docker.io/library/mysql:latest  # Docker Hub上的真实地址
 
 
-# 等价
-docker pull mysql == docker pull docker.io/library/mysql:latest
+# 下载镜像的名字  等价于  直接从 Hub上真实地址下载
+docker pull mysql == docker pull docker.io/library/mysql:latest 
 
-# 指定版本下载
+# 下载指定版本（这个版本必须是Docker Hub上有的版本）
 [root@VM-0-17-centos docker-learn]# docker pull mysql:5.7
 5.7: Pulling from library/mysql
 a10c77af2613: Already exists 
@@ -569,44 +573,89 @@ b76a7eb51ffd: Already exists
 2d2c75386df9: Already exists 
 63e92e4046c9: Already exists 
 f5845c731544: Already exists 
-bd0401123a9b: Already exists  # 分层下载的优势，已下载的不会重复下载，节省空间
+bd0401123a9b: Already exists  # 分层下载的优势，已下载(Already)的不会重复下载，节省空间
 2724b2da64fd: Pull complete 
 d10a7e9e325c: Pull complete 
 1c5fd9c3683d: Pull complete 
 2e35f83a12e9: Pull complete 
-Digest: sha256:7a3a7b7a29e6fbff433c339fc52245435fa2c308586481f2f92ab1df239d6a29
-Status: Downloaded newer image for mysql:5.7
-docker.io/library/mysql:5.7
+Digest: sha256:7a3a7b7a29e6fbff433c339fc52245435fa2c308586481f2f92ab1df239d6a29 # 签名
+Status: Downloaded newer image for mysql:5.7      # 下载状态成功                          
+docker.io/library/mysql:5.7                       # 镜像的下载地址
 ```
 
-![img](img/1637759627449-96c85e79-426f-4ea2-bf1e-b2a8de79c61a.png)
+![img](img/%E5%90%84%E7%A7%8D%E7%89%88%E6%9C%AC%E9%95%9C%E5%83%8F.png)
 
 
 
-##### docker rmi 删除镜像
+#### **docker rmi 删除镜像**
+
+说明：这里rmi可以理解为remove images
 
 ```shell
-docker rmi -f 镜像id  						 	# 删除指定镜像
+docker rmi -f 镜像id  						 	# 通过镜像id来删除指定镜像
 docker rmi -f 镜像id 镜像id 镜像id   	# 删除多个镜像
-docker rmi -f $(docker images -aq)  # 删除全部镜像
+docker rmi -f $(docker images -aq)  # 删除全部镜像，$()是一个查询语句表示查询所有镜像，然后再使用rmi命令递归删除所有的镜像
+```
+
+```shell
+[root@VM-24-12-centos ~]# docker images         【查看下载到本地的所有镜像】
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+mysql         5.7       c20987f18b13   2 months ago   448MB
+mysql         latest    3218b38490ce   2 months ago   516MB
+hello-world   latest    feb5d9fea6a5   5 months ago   13.3kB
+[root@VM-24-12-centos ~]# docker rmi -f c20987f18b13  【根据ID删除镜像】
+Untagged: mysql:5.7
+Untagged: mysql@sha256:f2ad209efe9c67104167fc609cca6973c8422939491c9345270175a300419f94
+Deleted: sha256:c20987f18b130f9d144c9828df630417e2a9523148930dc3963e9d0dab302a76
+Deleted: sha256:6567396b065ee734fb2dbb80c8923324a778426dfd01969f091f1ab2d52c7989
+Deleted: sha256:0910f12649d514b471f1583a16f672ab67e3d29d9833a15dc2df50dd5536e40f
+Deleted: sha256:6682af2fb40555c448b84711c7302d0f86fc716bbe9c7dc7dbd739ef9d757150
+Deleted: sha256:5c062c3ac20f576d24454e74781511a5f96739f289edaadf2de934d06e910b92
+[root@VM-24-12-centos ~]# docker images               【验证是否真的删除】
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+mysql         latest    3218b38490ce   2 months ago   516MB
+hello-world   latest    feb5d9fea6a5   5 months ago   13.3kB
+[root@VM-24-12-centos ~]# docker rmi -f $(docker images -aq) 【递归删除下载到本地的所有镜像】
+Untagged: mysql:latest
+Untagged: mysql@sha256:e9027fe4d91c0153429607251656806cc784e914937271037f7738bd5b8e7709
+Deleted: sha256:3218b38490cec8d31976a40b92e09d61377359eab878db49f025e5d464367f3b
+Deleted: sha256:aa81ca46575069829fe1b3c654d9e8feb43b4373932159fe2cad1ac13524a2f5
+Deleted: sha256:0558823b9fbe967ea6d7174999be3cc9250b3423036370dc1a6888168cbd224d
+Deleted: sha256:a46013db1d31231a0e1bac7eeda5ad4786dea0b1773927b45f92ea352a6d7ff9
+Deleted: sha256:af161a47bb22852e9e3caf39f1dcd590b64bb8fae54315f9c2e7dc35b025e4e3
+Deleted: sha256:feff1495e6982a7e91edc59b96ea74fd80e03674d92c7ec8a502b417268822ff
+Deleted: sha256:8805862fcb6ef9deb32d4218e9e6377f35fb351a8be7abafdf1da358b2b287ba
+Deleted: sha256:872d2f24c4c64a6795e86958fde075a273c35c82815f0a5025cce41edfef50c7
+Deleted: sha256:6fdb3143b79e1be7181d32748dd9d4a845056dfe16ee4c827410e0edef5ad3da
+Deleted: sha256:b0527c827c82a8f8f37f706fcb86c420819bb7d707a8de7b664b9ca491c96838
+Deleted: sha256:75147f61f29796d6528486d8b1f9fb5d122709ea35620f8ffcea0e0ad2ab0cd0
+Deleted: sha256:2938c71ddf01643685879bf182b626f0a53b1356138ef73c40496182e84548aa
+Deleted: sha256:ad6b69b549193f81b039a1d478bc896f6e460c77c1849a4374ab95f9a3d2cea2
+Untagged: hello-world:latest
+Untagged: hello-world@sha256:97a379f4f88575512824f3b352bc03cd75e239179eea0fecc38e597b2209f49a
+Deleted: sha256:feb5d9fea6a5e9606aa995e879d862b825965ba48de054caab5ef356dc6b3412
+[root@VM-24-12-centos ~]# docker images                【查看并验证是否所有的镜像都删除了】
+REPOSITORY   TAG       IMAGE ID   CREATED   SIZE
 ```
 
 
 
-#### 3.3 容器命令
+### 3.3 容器命令
 
-**说明：有了镜像才可以创建容器，下载一个 centos 镜像测试学习。**
+*说明：有了镜像才可以创建容器，下载一个 centos 镜像作为例子进行测试学习*
 
 ```shell
 docker pull centos
 ```
 
-##### 新建容器并启动
+
+
+#### **Step1: 新建容器并启动**
 
 ```shell
-docker run [可选参数] image
+docker run [可选参数] image名字
 
-# 参数说明
+# 可选参数说明
 --name="Name"  容器名字，用来区分容器，比如 tomcat01,tomcat02
 -d						 后台方式运行，nohup
 -it						 使用交互方式运行，进入容器查看内容
@@ -630,7 +679,9 @@ bin  dev  etc  home  lib  lib64  lost+found  media  mnt  opt  proc  root  run  s
 exit
 ```
 
-##### 列出所有运行的容器
+
+
+#### **列出所有运行的容器**
 
 ```shell
 # docker ps 命令
@@ -647,14 +698,18 @@ CONTAINER ID   IMAGE          COMMAND       CREATED          STATUS             
 05744de3872f   feb5d9fea6a5   "/hello"      56 minutes ago   Exited (0) 56 minutes ago                 cranky_kirch
 ```
 
-##### 退出容器
+
+
+#### **退出容器**
 
 ```shell
 exit  # 直接容器停止并退出
 Ctrl + P + Q # 容器不停止，退出
 ```
 
-##### 删除容器 
+
+
+#### **删除容器** 
 
 ```shell
 docker rm 容器id  # 删除指定容器，不能删除正在运行的容器，如要强制删除 rm -f
@@ -662,7 +717,9 @@ docker rm -f $(docker ps -aq)  # 删除所有容器
 docker ps -a -q|xargs docker rm  # 删除所有容器
 ```
 
-##### 启动和停止容器的操作
+
+
+#### **启动和停止容器的操作**
 
 ```shell
 docker start 容器id  # 启动
@@ -673,9 +730,9 @@ docker kill 容器id  # 强制停止
 
 #### 
 
-#### 3.4 常用其他命令
+### 3.4 常用其他命令
 
-##### 后台启动容器
+#### **后台启动容器**
 
 ```shell
 # 命令：docker run -d 镜像名
@@ -687,7 +744,9 @@ ducker run -d centos
 # nginx，容器启动后，发现自己没有提供服务，就会立刻停止，就是没有程序了
 ```
 
-##### 查看日志
+
+
+#### **查看日志**
 
 ```shell
 docker logs -f -t --tail 10 容器ID
@@ -717,7 +776,9 @@ dde1a464c083   centos    "/bin/sh -c 'while t…"   3 seconds ago   Up 2 seconds
 2021-11-25T02:04:20.492309173Z sugar
 ```
 
-##### 查看容器中的进程信息 ps
+
+
+#### **查看容器中的进程信息** ps
 
 ```shell
 # 命令：docker top 容器ID
@@ -727,7 +788,9 @@ root                19991               19972               0                   
 root                26821               19991               0                   10:07               ?                   00:00:00            /usr/bin/coreutils --coreutils-prog-shebang=sleep /usr/bin/sleep 1
 ```
 
-##### 查看镜像的元数据
+
+
+#### **查看镜像的元数据**
 
 ```shell
 # 命令
@@ -944,7 +1007,9 @@ docker inspect 容器ID
 ]
 ```
 
-##### 进入当前正在运行的容器
+
+
+#### **进入当前正在运行的容器**
 
 docker exec 和 docker attach 的区别：
 
@@ -978,7 +1043,9 @@ docker attach 容器ID
 正在执行的代码...
 ```
 
-##### 从容器拷贝文件到主机
+
+
+#### **从容器拷贝文件到主机**
 
 ```shell
 命令：docker cp 容器ID:容器内路径 目的主机路径
@@ -1009,13 +1076,17 @@ CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS                   
 # 拷贝是一个手动过程，未来可以使用 -v 卷的技术，实现自动同步。
 ```
 
-##### 查看容器内存占用
+
+
+#### **查看容器内存占用**
 
 ```shell
 命令：docker stats
 ```
 
-#### 3.5 小结
+
+
+### 3.5 小结
 
 ![img](img/1637807326376-66e018b7-f57f-4431-8da4-5f9a11279ada.png)
 
@@ -1027,9 +1098,9 @@ CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS                   
 
 
 
-### 4 实践练习
+## 4 实践练习
 
-#### 4.1 安装Nginx
+### 4.1 安装Nginx
 
 ```shell
 # 1、搜索镜像 seach，建议docker hub看版本号
