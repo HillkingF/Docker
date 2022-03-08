@@ -652,10 +652,15 @@ docker pull centos
 
 #### **Step1: 新建容器并启动**
 
+> 镜像和容器的区别：可以理解为1对多的关系，基于一个镜像可以创建多个容器，容器与容器之间相互隔离。镜像包括具体的应用及环境，容器是镜像安装后的结果，只不过不同的容器之间互不干扰。
+
+创建容器并启动的命令公式：
+
 ```shell
+# 命令公式（容器来源于image）:
 docker run [可选参数] image名字
 
-# 可选参数说明
+# [可选参数]说明
 --name="Name"  容器名字，用来区分容器，比如 tomcat01,tomcat02
 -d						 后台方式运行，nohup
 -it						 使用交互方式运行，进入容器查看内容
@@ -663,12 +668,15 @@ docker run [可选参数] image名字
 	-p  主机端口:容器端口（常用）
   -p  容器端口
 	-p  ip:主机端口:容器端口  
-  
 -P						 随机指定端口
+```
 
-# 测试，启动并进入容器（主机名称变化！）
-[root@VM-0-17-centos docker-learn]# docker run -it centos /bin/bash
-[root@85618df812ed /]# 
+测试创建镜像centos的容器：
+
+```shell
+# ，启动并进入容器（主机名称变化！）
+[root@VM-24-12-centos ~]# docker run -it centos /bin/bash
+[root@e711af76d16f /]# 
 
 # 查看容器内的centos（基础版本）
 [root@85618df812ed /]# ls
