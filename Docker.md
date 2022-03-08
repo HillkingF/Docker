@@ -663,7 +663,7 @@ docker run [可选参数] image名字
 # [可选参数]说明
 --name="Name"  容器名字，用来区分容器，比如 tomcat01,tomcat02
 -d						 后台方式运行，nohup
--it						 使用交互方式运行，进入容器查看内容
+-it						 使用交互方式运行，进入容器查看内容(常用这个)
 -p						 指定容器的端口
 	-p  主机端口:容器端口（常用）
   -p  容器端口
@@ -888,53 +888,97 @@ CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
 
 ### 3.4 常用其他命令
 
-#### **后台启动容器**
+#### **1: 后台启动容器**
+
+命令公式：
 
 ```shell
-# 命令：docker run -d 镜像名
-ducker run -d centos
+docker run -d 镜像名
+```
 
-# 问题：docker ps后，发现centos停止了
+命令测试：
 
-# 常见的坑：docker 容器使用后台运行，就必须要有一个前台进程，如果docker发现没有应用，就会自动停止
+```shell
+# 1、查看所有的容器id：0个
+[root@VM-24-12-centos ~]# docker ps -aq
+# 2、使用后台创建容器的命令创建一个新的容器：返回值啥意思没查到
+[root@VM-24-12-centos ~]# docker run -d centos
+2ede706765d3fe0c2de04b17a7f4a91670a78fd3bb76fc4bb8c81383b1e6368f
+# 3、查看此时正在运行的容器：竟然没有！！！！
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# 4、查看所有容器id：有一个，说明后台创建的容器停止运行了
+[root@VM-24-12-centos ~]# docker ps -aq
+2ede706765d3
+[root@VM-24-12-centos ~]# 
+
+========================
+# 问题：我们会发现以上第2步->第3步存在问题：后台创建容器后没有手动退出或停止时，容器竟然自动停止了
+
+# 原因：docker 容器使用后台运行，就必须要有一个前台进程，如果docker发现没有应用，就会自动停止
 # nginx，容器启动后，发现自己没有提供服务，就会立刻停止，就是没有程序了
 ```
 
 
 
-#### **查看日志**
+#### **2: 查看日志**
+
+命令公式：
 
 ```shell
-docker logs -f -t --tail 10 容器ID
-
-# 写一段shell脚本造日志
-[root@VM-0-17-centos docker-learn]# docker run -d centos /bin/sh -c "while true;do echo sugar;sleep 1;done"
-dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01
-
-# 查看容器进程
-[root@VM-0-17-centos docker-learn]# docker ps
-CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS     NAMES
-dde1a464c083   centos    "/bin/sh -c 'while t…"   3 seconds ago   Up 2 seconds             objective_thompson
-3cfa50084690   centos    "/bin/bash"              3 minutes ago   Up 3 minutes             upbeat_hopper
+docker logs --help  # 使用万能公式查看logs命令的使用方法和可选参数
+docker logs -f -t --tail 10 容器ID   # 显示某个容器的10条日志
 
 # 显示日志
  -tf
  --tail number # 显示日志的条数
-[root@VM-0-17-centos docker-learn]# docker logs -tf --tail 10 dde1a464c083
-2021-11-25T02:04:12.468373400Z sugar
-2021-11-25T02:04:13.471361637Z sugar
-2021-11-25T02:04:14.474283575Z sugar
-2021-11-25T02:04:15.477498546Z sugar
-2021-11-25T02:04:16.480691335Z sugar
-2021-11-25T02:04:17.485561677Z sugar
-2021-11-25T02:04:18.486116685Z sugar
-2021-11-25T02:04:19.489059797Z sugar
-2021-11-25T02:04:20.492309173Z sugar
+```
+
+命令测试：
+
+```shell
+==============================案例一=================================
+# 1、创建一个容器
+[root@VM-24-12-centos ~]# docker run -it centos /bin/bash
+# 2、停止运行容器
+[root@d234bdacc6c7 /]# exit  
+exit
+# 3、查看所有容器的id：可以看到刚刚创建的容器id
+[root@VM-24-12-centos ~]# docker ps -aq
+d234bdacc6c7
+# 4、查看上面这个容器的一条日志
+[root@VM-24-12-centos ~]# docker logs -f -t --tail 1 d234bdacc6c7
+2022-03-08T07:29:20.937540945Z exit
+
+==============================案例二=================================
+# 写一段shell脚本造日志，让系统每秒都打印输出
+[root@VM-24-12-centos ~]# docker run -d centos /bin/sh -c "while true;do echo nini;sleep 1;done"
+923678468c6495d25448e86b4ee129319327d2e7464655284e7626ed257b5944
+
+# 查看容器进程
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS     NAMES
+923678468c64   centos    "/bin/sh -c 'while t…"   7 seconds ago   Up 6 seconds             optimistic_newton
+
+# 显示日志
+# -tf 等价于 -t -f
+# --tail number # 显示日志的条数
+[root@VM-24-12-centos ~]# docker logs -t -f --tail 10 923678468c64
+2022-03-08T07:45:14.937767622Z nini
+2022-03-08T07:45:15.939084958Z nini
+2022-03-08T07:45:16.940490740Z nini
+2022-03-08T07:45:17.942026414Z nini
+2022-03-08T07:45:18.943536170Z nini
+2022-03-08T07:45:19.945165678Z nini
+2022-03-08T07:45:20.946529752Z nini
+2022-03-08T07:45:21.947905478Z nini
+2022-03-08T07:45:22.949281865Z nini
+2022-03-08T07:45:23.950678739Z nini
 ```
 
 
 
-#### **查看容器中的进程信息** ps
+#### **3: 查看容器中的进程信息** ps
 
 ```shell
 # 命令：docker top 容器ID
@@ -946,7 +990,7 @@ root                26821               19991               0                   
 
 
 
-#### **查看镜像的元数据**
+#### **4: 查看镜像的元数据**
 
 ```shell
 # 命令
@@ -1165,7 +1209,7 @@ docker inspect 容器ID
 
 
 
-#### **进入当前正在运行的容器**
+#### **5: 进入当前正在运行的容器**
 
 docker exec 和 docker attach 的区别：
 
@@ -1201,7 +1245,7 @@ docker attach 容器ID
 
 
 
-#### **从容器拷贝文件到主机**
+#### **6: 从容器拷贝文件到主机**
 
 ```shell
 命令：docker cp 容器ID:容器内路径 目的主机路径
@@ -1234,7 +1278,7 @@ CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS                   
 
 
 
-#### **查看容器内存占用**
+#### **7: 查看容器内存占用**
 
 ```shell
 命令：docker stats
