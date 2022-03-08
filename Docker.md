@@ -650,7 +650,7 @@ docker pull centos
 
 
 
-#### **Step1: 新建容器并启动**
+#### **1: 新建容器并启动**
 
 > 镜像和容器的区别：可以理解为1对多的关系，基于一个镜像可以创建多个容器，容器与容器之间相互隔离。镜像包括具体的应用及环境，容器是镜像安装后的结果，只不过不同的容器之间互不干扰。
 
@@ -674,50 +674,113 @@ docker run [可选参数] image名字
 测试创建镜像centos的容器：
 
 ```shell
-# ，启动并进入容器（主机名称变化！）
+# 启动并进入容器（启动后主机名称变化，变成了docker ID！）
+# run启动docker， -it以交互方式打开一个终端， /bin/bash表示shell工具运行地址或Linux控制台地址
 [root@VM-24-12-centos ~]# docker run -it centos /bin/bash
 [root@e711af76d16f /]# 
 
-# 查看容器内的centos（基础版本）
-[root@85618df812ed /]# ls
-bin  dev  etc  home  lib  lib64  lost+found  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+# 查看容器内的centos系统（此时的centos是基础版本，很多命令都不完善）
+[root@0f5722faa978 /]# ls
+bin  etc   lib    lost+found  mnt  proc  run   srv  tmp  var dev  home  lib64  media  opt  root  sbin  sys  usr
 
-# 从容器退回主机
-[root@85618df812ed /]# exit
+# 从容器退回主机,主机名称
+[root@0f5722faa978 /]# exit
 exit
+[root@VM-24-12-centos ~]# 
 ```
 
 
 
-#### **列出所有运行的容器**
+#### **2: 列出所有容器**
+
+命令公式：
 
 ```shell
-# docker ps 命令
-   # 列出当前正在运行的容器
--a # 列出当前正在运行的容器 + 带出历史运行过的容器
--n=? # 显示最近创建的容器
--q # 只显示容器的编号
+docker ps [可选参数]
+# docker ps： 列出当前正在运行的容器
+# [可选参数]
+#  -a    列出当前正在运行的容器 + 带出历史运行过的容器
+#  -n=？ 显示最近创建的容器,例如-n=2表示最近运行过的2个容器
+#  -q    只显示容器的编号
+```
 
-[root@VM-0-17-centos docker-learn]# docker ps
+命令测试及结果：
+
+```shell
+[root@VM-24-12-centos ~]# docker ps
 CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
-[root@VM-0-17-centos docker-learn]# docker ps -a
-CONTAINER ID   IMAGE          COMMAND       CREATED          STATUS                          PORTS     NAMES
-85618df812ed   centos         "/bin/bash"   2 minutes ago    Exited (0) About a minute ago             sweet_vaughan
-05744de3872f   feb5d9fea6a5   "/hello"      56 minutes ago   Exited (0) 56 minutes ago                 cranky_kirch
+
+[root@VM-24-12-centos ~]# docker ps -a
+CONTAINER ID   IMAGE          COMMAND       CREATED         STATUS                       PORTS     NAMES
+47d7257f28eb   centos         "/bin/bash"   4 minutes ago   Exited (127) 4 minutes ago             n1
+0f5722faa978   centos         "/bin/bash"   7 minutes ago   Exited (0) 7 minutes ago               wizardly_ritchie
+e711af76d16f   centos         "/bin/bash"   2 hours ago     Exited (0) 2 hours ago                 trusting_einstein
+0e591d9ac45a   feb5d9fea6a5   "/hello"      3 days ago      Exited (0) 3 days ago                  objective_davinci
+
+# 先查找所有运行过的容器，然后选择其中前1个显示
+[root@VM-24-12-centos ~]# docker ps -a -n=1
+CONTAINER ID   IMAGE     COMMAND       CREATED          STATUS                        PORTS     NAMES
+47d7257f28eb   centos    "/bin/bash"   59 minutes ago   Exited (127) 59 minutes ago             n1
+
+# 查找容器编号，只使用-q啥都没查到，因此需要和其他可选参数组合使用
+[root@VM-24-12-centos ~]# docker ps -q
+[root@VM-24-12-centos ~]# 
+
+# 查找所有容器编号，以下命令等价于 docker ps -aq
+[root@VM-24-12-centos ~]# docker ps -a -q
+47d7257f28eb
+0f5722faa978
+e711af76d16f
+0e591d9ac45a
+
+# 查找前两个历史容器的编号
+[root@VM-24-12-centos ~]# docker ps -aq -n=2
+47d7257f28eb
+0f5722faa978
+[root@VM-24-12-centos ~]# docker ps -q -n=2
+47d7257f28eb
+0f5722faa978
 ```
 
 
 
-#### **退出容器**
+#### **3: 退出容器**
+
+命令或操作：
 
 ```shell
 exit  # 直接容器停止并退出
 Ctrl + P + Q # 容器不停止，退出
 ```
 
+测试命令及操作：
+
+```shell
+# 1、查看现有运行容器：没有
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# 2、创建并启动一个容器
+[root@VM-24-12-centos ~]# docker run -it centos /bin/bash
+# 3、使用exit命令停止容器并退出
+[root@786fe3aa5d8a /]# exit
+exit
+# 4、查看此时正在运行的容器：没有
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+# 5、重新创建并启动一个容器
+[root@VM-24-12-centos ~]# docker run -it centos /bin/bash
+# 6、使用Ctrl+P+Q的方式退出容器（但不停止容器），直接查看现有运行容器
+[root@44f67d9ee8f2 /]# [root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND       CREATED          STATUS          PORTS     NAMES
+44f67d9ee8f2   centos    "/bin/bash"   11 seconds ago   Up 11 seconds             sweet_swanson
+[root@VM-24-12-centos ~]# 
+```
 
 
-#### **删除容器** 
+
+#### **4: 删除容器** 
+
+命令公式：
 
 ```shell
 docker rm 容器id  # 删除指定容器，不能删除正在运行的容器，如要强制删除 rm -f
@@ -725,18 +788,103 @@ docker rm -f $(docker ps -aq)  # 删除所有容器
 docker ps -a -q|xargs docker rm  # 删除所有容器
 ```
 
-
-
-#### **启动和停止容器的操作**
+测试命令：
 
 ```shell
-docker start 容器id  # 启动
-docker restart 容器id  # 重启
-docker stop 容器id  # 停止当前正在运行的
-docker kill 容器id  # 强制停止
+======================测试第一个删除命令======================
+# 1、先查看所有容器的编号：其中第一个是正在运行的容器，第二个是已经停止的容器
+[root@VM-24-12-centos ~]# docker ps -aq
+44f67d9ee8f2
+786fe3aa5d8a
+# 2、删除第一个正在运行的容器，删除失败，说明只使用rm删除无效
+[root@VM-24-12-centos ~]# docker rm 44f67d9ee8f2
+Error response from daemon: You cannot remove a running container 44f67d9ee8f2ca34f857e1fd1375d84add79ae10430012e58adaa8be0ee4143d. Stop the container before attempting removal or force remove
+# 3、删除第二个停止运行的容器
+[root@VM-24-12-centos ~]# docker rm 786fe3aa5d8a
+786fe3aa5d8a
+# 4、查看正在运行的容器：只有一个
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS         PORTS     NAMES
+44f67d9ee8f2   centos    "/bin/bash"   8 minutes ago   Up 8 minutes             sweet_swanson
+# 5、查看所有容器：停止运行的已经被删除了
+[root@VM-24-12-centos ~]# docker ps -aq
+44f67d9ee8f2
+======================测试第二个删除命令======================
+# 1、查看所有正在运行的容器编号
+[root@VM-24-12-centos ~]# docker ps -q
+7f22e5b75e7c
+44f67d9ee8f2
+# 2、查看所有容器编号：运行+停止运行的
+[root@VM-24-12-centos ~]# docker ps -aq
+7f22e5b75e7c
+71bd115cf6e5
+44f67d9ee8f2
+# 3、使用第二个命令删除所有的容器
+[root@VM-24-12-centos ~]# docker rm -f $(docker ps -aq)
+7f22e5b75e7c
+71bd115cf6e5
+44f67d9ee8f2
+# 4、查看删除操作后存在的容器：没有了
+[root@VM-24-12-centos ~]# docker ps -aq
+[root@VM-24-12-centos ~]# 
+======================测试第三个删除命令======================
+# 1、查看所有正在运行的容器编号：没有
+[root@VM-24-12-centos ~]# docker ps -q
+# 2、查看所有容器编号,包括运行和停止运行的：2个
+[root@VM-24-12-centos ~]# docker ps -aq
+c59ce4749a88
+e55b42b0f46a
+# 3、使用第三个命令删除所有的容器
+[root@VM-24-12-centos ~]# docker ps -a -q|xargs docker rm
+c59ce4749a88
+e55b42b0f46a
+# 4、查看删除操作后所有的容器编号：都没有了
+[root@VM-24-12-centos ~]# docker ps -aq
+[root@VM-24-12-centos ~]#
 ```
 
-#### 
+
+
+#### **5: 启动和停止容器**
+
+命令公式：
+
+```shell
+docker start 容器id    # 启动
+docker restart 容器id  # 重启
+docker stop 容器id     # 停止当前正在运行的
+docker kill 容器id     # 强制停止
+```
+
+测试命令：
+
+```shell
+# 1、查看正在运行的容器编号：无
+[root@VM-24-12-centos ~]# docker ps -q
+# 2、查看所有容器编号：有1个停止的
+[root@VM-24-12-centos ~]# docker ps -aq
+480d92e31e35
+# 3、启动这个停止的容器编号
+[root@VM-24-12-centos ~]# docker start 480d92e31e35
+480d92e31e35
+# 4、查看正在运行的容器：判断id说明停止的容器开始运行了
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS         PORTS     NAMES
+480d92e31e35   centos    "/bin/bash"   3 minutes ago   Up 7 seconds             hardcore_yalow
+# 5、停止上面正在运行的容器
+[root@VM-24-12-centos ~]# docker stop 480d92e31e35
+480d92e31e35
+# 6、重新查看正在运行的容器：没有查到，说明容器成功停止运行了
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+[root@VM-24-12-centos ~]# 
+```
+
+
+
+
+
+
 
 ### 3.4 常用其他命令
 
