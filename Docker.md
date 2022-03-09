@@ -455,7 +455,7 @@ Docker Server 接收到 Docker Client的指令，就会执行这个命令！
 
 
 
-
+------
 
 ## 三、Docker 常用命令
 
@@ -978,35 +978,65 @@ CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS        
 
 
 
-#### **3: 查看容器中的进程信息** ps
+#### **3: 查看容器内的进程信息**
+
+命令公式：
 
 ```shell
 # 命令：docker top 容器ID
-[root@VM-0-17-centos docker-learn]# docker top dde1a464c083
-UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
-root                19991               19972               0                   10:02               ?                   00:00:00            /bin/sh -c while true;do echo sugar;sleep 1;done
-root                26821               19991               0                   10:07               ?                   00:00:00            /usr/bin/coreutils --coreutils-prog-shebang=sleep /usr/bin/sleep 1
+[root@VM-0-17-centos docker-learn]# docker top 容器id
+```
+
+命令测试：
+
+```shell
+# 1、创建一个新的容器
+[root@VM-24-12-centos ~]# docker run -it centos /bin/bash
+# 2、停止并退出容器
+[root@513d500cc743 /]# exit  
+exit
+# 3、查看容器id
+[root@VM-24-12-centos ~]# docker ps -aq
+513d500cc743
+# 4、top命令根据id查看这个容器进行的信息：没有查到，说明容器进程必须运行中才行
+[root@VM-24-12-centos ~]# docker top 513d500cc743
+Error response from daemon: Container 513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862 is not running
+# 5、启动这个容器：此时容器是运行的，可以看做一个进程
+[root@VM-24-12-centos ~]# docker start 513d500cc743
+513d500cc743
+# 6、使用top命令查看容器中的进程信息
+[root@VM-24-12-centos ~]# docker top 513d500cc743
+UID     PID     PPID     C     STIME     TTY     TIME     CMD
+root    21147   21126    0     15:53     pts/0   00:00:00 /bin/bash
 ```
 
 
 
 #### **4: 查看镜像的元数据**
 
+命令公式：
+
 ```shell
 # 命令
 docker inspect 容器ID
+```
 
-# 测试
-[root@VM-0-17-centos docker-learn]# docker inspect dde1a464c083
+命令测试：
+
+```shell
+# 查看正在运行的容器
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID  IMAGE   COMMAND     CREATED         STATUS         PORTS  NAMES
+513d500cc743  centos  "/bin/bash" 11 minutes ago  Up 10 minutes         reverent_cray
+
+# 根据容器id查看镜像的元数据
+[root@VM-24-12-centos ~]# docker inspect 513d500cc743
 [
     {
-        "Id": "dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01",
-        "Created": "2021-11-25T02:02:29.726179688Z",
-        "Path": "/bin/sh",
-        "Args": [
-            "-c",
-            "while true;do echo sugar;sleep 1;done"
-        ],
+        "Id": "513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862",
+        "Created": "2022-03-08T07:52:01.305514169Z",
+        "Path": "/bin/bash",
+        "Args": [],
         "State": {
             "Status": "running",
             "Running": true,
@@ -1014,18 +1044,18 @@ docker inspect 容器ID
             "Restarting": false,
             "OOMKilled": false,
             "Dead": false,
-            "Pid": 19991,
+            "Pid": 21147,
             "ExitCode": 0,
             "Error": "",
-            "StartedAt": "2021-11-25T02:02:30.174630959Z",
-            "FinishedAt": "0001-01-01T00:00:00Z"
+            "StartedAt": "2022-03-08T07:53:11.7798336Z",
+            "FinishedAt": "2022-03-08T07:52:11.624987369Z"
         },
         "Image": "sha256:5d0da3dc976460b72c77d94c8a1ad043720b0416bfc16c52c45d4847e53fadb6",
-        "ResolvConfPath": "/var/lib/docker/containers/dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01/resolv.conf",
-        "HostnamePath": "/var/lib/docker/containers/dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01/hostname",
-        "HostsPath": "/var/lib/docker/containers/dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01/hosts",
-        "LogPath": "/var/lib/docker/containers/dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01/dde1a464c083e2615d97517b3422db856a6a6a4b179cbf2e74d1d6f5a2b40e01-json.log",
-        "Name": "/objective_thompson",
+        "ResolvConfPath": "/var/lib/docker/containers/513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862/hostname",
+        "HostsPath": "/var/lib/docker/containers/513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862/hosts",
+        "LogPath": "/var/lib/docker/containers/513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862/513d500cc743f0c358b3e566d385390b9235a5ec529e17790970fee4cfa9c862-json.log",
+        "Name": "/reverent_cray",
         "RestartCount": 0,
         "Driver": "overlay2",
         "Platform": "linux",
@@ -1128,31 +1158,29 @@ docker inspect 容器ID
         },
         "GraphDriver": {
             "Data": {
-                "LowerDir": "/var/lib/docker/overlay2/dcbea1d94c059acde681543ffcfe367fa6391602d1f8bc97e138484648e333e9-init/diff:/var/lib/docker/overlay2/6d4efc15839f256ed426b3ec82335096641c716514feebb5dfd7fd7de88528b6/diff",
-                "MergedDir": "/var/lib/docker/overlay2/dcbea1d94c059acde681543ffcfe367fa6391602d1f8bc97e138484648e333e9/merged",
-                "UpperDir": "/var/lib/docker/overlay2/dcbea1d94c059acde681543ffcfe367fa6391602d1f8bc97e138484648e333e9/diff",
-                "WorkDir": "/var/lib/docker/overlay2/dcbea1d94c059acde681543ffcfe367fa6391602d1f8bc97e138484648e333e9/work"
+                "LowerDir": "/var/lib/docker/overlay2/1fab3489287d213023b3203cf9e33fa7b14f86f70e35bff492407f78cc98b270-init/diff:/var/lib/docker/overlay2/38894aaa355a60161a07dcc9afc07c642d90295c2b46527ee6eef00e619f1b61/diff",
+                "MergedDir": "/var/lib/docker/overlay2/1fab3489287d213023b3203cf9e33fa7b14f86f70e35bff492407f78cc98b270/merged",
+                "UpperDir": "/var/lib/docker/overlay2/1fab3489287d213023b3203cf9e33fa7b14f86f70e35bff492407f78cc98b270/diff",
+                "WorkDir": "/var/lib/docker/overlay2/1fab3489287d213023b3203cf9e33fa7b14f86f70e35bff492407f78cc98b270/work"
             },
             "Name": "overlay2"
         },
         "Mounts": [],
         "Config": {
-            "Hostname": "dde1a464c083",
+            "Hostname": "513d500cc743",
             "Domainname": "",
             "User": "",
-            "AttachStdin": false,
-            "AttachStdout": false,
-            "AttachStderr": false,
-            "Tty": false,
-            "OpenStdin": false,
-            "StdinOnce": false,
+            "AttachStdin": true,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "Tty": true,
+            "OpenStdin": true,
+            "StdinOnce": true,
             "Env": [
                 "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
             ],
             "Cmd": [
-                "/bin/sh",
-                "-c",
-                "while true;do echo sugar;sleep 1;done"
+                "/bin/bash"
             ],
             "Image": "centos",
             "Volumes": null,
@@ -1169,111 +1197,160 @@ docker inspect 容器ID
         },
         "NetworkSettings": {
             "Bridge": "",
-            "SandboxID": "d1873391aa1c91dd40d5a80f93e812f57f8b8200a70225e2bef764c98002d7a1",
+            "SandboxID": "7474d5c2dfeb9910862f8d143e6d8b760db3ff7179cfa9f9c2a5cb66acfe7f73",
             "HairpinMode": false,
             "LinkLocalIPv6Address": "",
             "LinkLocalIPv6PrefixLen": 0,
             "Ports": {},
-            "SandboxKey": "/var/run/docker/netns/d1873391aa1c",
+            "SandboxKey": "/var/run/docker/netns/7474d5c2dfeb",
             "SecondaryIPAddresses": null,
             "SecondaryIPv6Addresses": null,
-            "EndpointID": "6658e90b1f6b840486c02593324e995bf31316560d6fc31e6e884654768e7be3",
-            "Gateway": "172.18.0.1",
+            "EndpointID": "f3bd31288c8256d5a016b64fd404b794fa24df0246fd79dff521a432c844dd96",
+            "Gateway": "172.17.0.1",
             "GlobalIPv6Address": "",
             "GlobalIPv6PrefixLen": 0,
-            "IPAddress": "172.18.0.3",
+            "IPAddress": "172.17.0.2",
             "IPPrefixLen": 16,
             "IPv6Gateway": "",
-            "MacAddress": "02:42:ac:12:00:03",
+            "MacAddress": "02:42:ac:11:00:02",
             "Networks": {
                 "bridge": {
                     "IPAMConfig": null,
                     "Links": null,
                     "Aliases": null,
-                    "NetworkID": "1b6db0658c7167d94ffde4681cda5b3c7e119bcaf07557f25d738741be0f54c7",
-                    "EndpointID": "6658e90b1f6b840486c02593324e995bf31316560d6fc31e6e884654768e7be3",
-                    "Gateway": "172.18.0.1",
-                    "IPAddress": "172.18.0.3",
+                    "NetworkID": "5759c613bf374fc13dd5c7c97e092e24c0873fb63b2c9a270d3aafa0d27f2f84",
+                    "EndpointID": "f3bd31288c8256d5a016b64fd404b794fa24df0246fd79dff521a432c844dd96",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.2",
                     "IPPrefixLen": 16,
                     "IPv6Gateway": "",
                     "GlobalIPv6Address": "",
                     "GlobalIPv6PrefixLen": 0,
-                    "MacAddress": "02:42:ac:12:00:03",
+                    "MacAddress": "02:42:ac:11:00:02",
                     "DriverOpts": null
                 }
             }
         }
     }
 ]
+[root@VM-24-12-centos ~]# 
 ```
 
 
 
 #### **5: 进入当前正在运行的容器**
 
-docker exec 和 docker attach 的区别：
+有两种方式可以进入当前正在运行的容器，`docker exec` 和 `docker attach`，区别：
 
 - exec：进入容器后开启一个新的终端，可以在里面操作（常用）
 - attach：进入容器正在执行的终端，不会启动新的进程
 
+> 第一种方式
+
+exec命令公式：
+
 ```shell
 # 通常容器都是使用后台方式运行的，需要进入容器，修改一些配置
-
-# 命令
 docker exec -it 容器ID bashShell
+# bashShell: 如/bin/bash
+```
 
-# 测试
-[root@VM-0-17-centos docker-learn]# docker ps
-CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS     NAMES
-dde1a464c083   centos    "/bin/sh -c 'while t…"   10 minutes ago   Up 10 minutes             objective_thompson
-3cfa50084690   centos    "/bin/bash"              13 minutes ago   Up 13 minutes             upbeat_hopper
-[root@VM-0-17-centos docker-learn]# docker exec -it dde1a464c083 /bin/bash
-[root@dde1a464c083 /]# ps -ef
+测试命令：
+
+```shell
+# 1、首先查看正在运行的容器
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND       CREATED          STATUS          PORTS     NAMES
+513d500cc743   centos    "/bin/bash"   42 minutes ago   Up 41 minutes             reverent_cray
+
+# 2、使用exec -it以交互的方式进入这个容器
+[root@VM-24-12-centos ~]# docker exec -it 513d500cc743 /bin/bash
+
+# 3、此时发现主机名变了，成功进入容器。查看容器目录
+[root@513d500cc743 /]# ls
+bin  etc   lib    lost+found  mnt  proc  run   srv  tmp  var
+dev  home  lib64  media       opt  root  sbin  sys  usr
+
+# 4、容器内的操作
+[root@513d500cc743 /]# ps -ef
 UID        PID  PPID  C STIME TTY          TIME CMD
-root         1     0  0 02:02 ?        00:00:00 /bin/sh -c while true;do echo sugar;sleep 1;done
-root       666     0  0 02:13 pts/0    00:00:00 /bin/bash
-root       703     1  0 02:13 ?        00:00:00 /usr/bin/coreutils --coreutils-prog-shebang=sleep /usr/bin/sl
-root       704   666  0 02:13 pts/0    00:00:00 ps -ef
+root         1     0  0 07:53 pts/0    00:00:00 /bin/bash
+root        16     0  0 08:35 pts/1    00:00:00 /bin/bash
+root        31    16  0 08:35 pts/1    00:00:00 ps -ef
+```
 
-# 命令二
+> 第二种方式
+
+命令公式：
+
+```shell
 docker attach 容器ID
+```
 
-# 测试
-[root@VM-0-17-centos docker-learn]# docker exec dde1a464c083 
-正在执行的代码...
+命令测试：
+
+```shell
+# 1、查看正在运行的容器
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND       CREATED          STATUS          PORTS     NAMES
+513d500cc743   centos    "/bin/bash"   48 minutes ago   Up 47 minutes             reverent_cray
+# 2、用attach命令进入容器：主机号变化了
+[root@VM-24-12-centos ~]# docker attach 513d500cc743
+[root@513d500cc743 /]# 
 ```
 
 
 
 #### **6: 从容器拷贝文件到主机**
 
+命令公式:
+
 ```shell
-命令：docker cp 容器ID:容器内路径 目的主机路径
+docker cp 容器ID:容器内路径 目的主机路径
+# 拷贝是一个手动过程，未来可以使用 -v 卷的技术，实现自动同步。
+```
 
-# 测试
-# 进入容器
-[root@VM-0-17-centos docker-learn]# docker attach 16c532b210a0
+命令测试：
 
-# 容器内创建文件
-[root@16c532b210a0 /]# cd /home/
-[root@16c532b210a0 home]# ls
-[root@16c532b210a0 home]# touch test.java
-[root@16c532b210a0 home]# exit
+```shell
+# 1、查看安装的镜像：centos
+[root@VM-24-12-centos ~]# docker images
+REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
+centos       latest    5d0da3dc9764   5 months ago   231MB
+# 2、在镜像中创建一个容器
+[root@VM-24-12-centos ~]# docker run -it centos /bin/bash
+# 3、使用ctrl+P+Q操作退出容器但不结束容器运行，然后查看正在运行的容器
+[root@06d8501403aa /]# [root@VM-24-12-centos ~]# docker ps
+CONTAINER ID  IMAGE   COMMAND     CREATED         STATUS        PORTS   NAMES
+06d8501403aa  centos  "/bin/bash" 29 seconds ago  Up 28 seconds         suspicious_ritchie
+
+# 4、在本地电脑创建一个 nini.java 文件
+[root@VM-24-12-centos ~]# cd /home
+[root@VM-24-12-centos home]# ls
+lighthouse
+[root@VM-24-12-centos home]# touch nini.java
+[root@VM-24-12-centos home]# ls
+lighthouse  nini.java
+
+# 5、进入容器内部并在home目录下创建一个test.java文件
+[root@VM-24-12-centos home]# docker ps
+CONTAINER ID  IMAGE  COMMAND     CREATED       STATUS     PORTS NAMES
+06d8501403aa  centos "/bin/bash" 3 minutes ago Up 3 minutes     suspicious_ritchie
+[root@VM-24-12-centos home]# docker attach 06d8501403aa
+[root@06d8501403aa /]# cd /home
+[root@06d8501403aa home]# ls
+[root@06d8501403aa home]# touch test.java
+[root@06d8501403aa home]# ls
+test.java
+
+# 6、退出容器
+[root@06d8501403aa home]# exit
 exit
 
-# 关闭容器也可以复制，查看容器ID
-[root@VM-0-17-centos docker-learn]# docker ps -a
-CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS                     PORTS     NAMES
-16c532b210a0   centos    "/bin/bash"   2 minutes ago   Exited (0) 7 seconds ago             stoic_sutherland
-
-# 从容器中复制出来
-[root@VM-0-17-centos docker-learn]# docker cp 16c532b210a0:/home/test.java /mnt/docker-learn
-[root@VM-0-17-centos docker-learn]# ll
-总用量 0
--rw-r--r-- 1 root root 0 11月 25 10:22 sugar.java
--rw-r--r-- 1 root root 0 11月 25 10:23 test.java
-
-# 拷贝是一个手动过程，未来可以使用 -v 卷的技术，实现自动同步。
+# 7、将容器home目录下的test.java文件下载到本地home目录下
+[root@VM-24-12-centos home]# docker cp 06d8501403aa:/home/test.java /home
+[root@VM-24-12-centos home]# ls
+lighthouse  nini.java  test.java
 ```
 
 
@@ -1298,7 +1375,11 @@ CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS                   
 
 
 
-## 4 实践练习
+
+
+------
+
+## 四、实践练习
 
 ### 4.1 安装Nginx
 
