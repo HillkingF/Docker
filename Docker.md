@@ -1381,39 +1381,103 @@ lighthouse  nini.java  test.java
 
 ## 四、实践练习
 
-### 4.1 安装Nginx
+### 4.1 Docker安装Nginx
+
+查看nginx版本号：
+
+![dockerhub查看nginx版本号](img/dockerhub%E6%9F%A5nginx%E7%89%88%E6%9C%AC%E5%8F%B7.png)
 
 ```shell
-# 1、搜索镜像 seach，建议docker hub看版本号
+# 1、可以docker搜索镜像查看是否存在nginx，然后进入docker hub网站看版本号
+[root@VM-24-12-centos ~]# docker search nginx
+NAME          DESCRIPTION                STARS   OFFICIAL   AUTOMATED
+nginx         Official build of Nginx.   16439   [OK]       
+bitnami/nginx Bitnami nginx Docker Image 120                [OK]
 
 
-# 2、下载镜像 pull
-docker pull nginx
+# 2、下载镜像：pull命令
+[root@VM-24-12-centos ~]# docker pull nginx
+Using default tag: latest
+latest: Pulling from library/nginx
+a2abf6c4d29d: Pull complete 
+a9edb18cadd1: Pull complete 
+589b7251471a: Pull complete 
+186b1aaa4aa6: Pull complete 
+b4df32aa5a72: Pull complete 
+a0bcbecc962e: Pull complete 
+Digest: sha256:0d17b565c37bcbd895e9d92315a05c1c3c9a29f762b011a10c54a66cd53c9b31
+Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest
 
-# 3、运行测试
-[root@VM-0-17-centos docker-learn]# docker images
+
+# 3、查看下载到本地的镜像
+[root@VM-24-12-centos ~]# docker images
 REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
-nginx        latest    ea335eea17ab   7 days ago     141MB
-centos       latest    5d0da3dc9764   2 months ago   231MB
+nginx        latest    605c77e624dd   2 months ago   141MB
+centos       latest    5d0da3dc9764   5 months ago   231MB
 
+# 4、以后台方式运行一个容器
 # -d 后台运行
-# --name 给容器命名
-# -p 宿主机端口：容器内部端口，建立映射
-[root@VM-0-17-centos docker-learn]# docker run -d --name nginx01 -p 3344:80 nginx
-823afc203db781304da10e5293c58e940f5dc101034d07b91517d34891220fc4
+# --name 给容器命名为nginx01
+# -p 宿主机端口：容器内部端口，建立映射(也就是说从宿主机公网3344端口可以访问到容器内的80端口)
+# 最后面的nginx是镜像名称
+[root@VM-24-12-centos ~]# docker run -d --name nginx01 -p 3344:80 nginx
+a7c27690811f24694af9c8478beeca64d3df2aa260e192ffb8741fd1eb160035
 
-[root@VM-0-17-centos docker-learn]# docker ps
-CONTAINER ID   IMAGE     COMMAND                  CREATED         STATUS         PORTS                                   NAMES
-823afc203db7   nginx     "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds   0.0.0.0:3344->80/tcp, :::3344->80/tcp   nginx01
+# 5、查看此时正在运行的容器
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID IMAGE  COMMAND                CREATED       STATUS       PORTS            NAMES
+a7c27690811f nginx  "/docker-entrypoint.…" 5 minutes ago Up 5 minutes 0.0.0.0:3344->80/tcp, :::3344->80/tcp   nginx01
 
-[root@VM-0-17-centos docker-learn]# curl localhost:3344
+# 6、查看宿主机端口
+[root@VM-24-12-centos ~]# curl localhost:3344
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>   【映射到了nginx容器内的80端口，所以可以显示nginx信息】
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
 
-# 4、进入容器
-[root@VM-0-17-centos docker-learn]# docker exec -t nginx01 /bin/bash
-root@823afc203db7:/# whereis nginx
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+
+# 4、进入容器看看
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND                  CREATED       STATUS       PORTS                                   NAMES
+a7c27690811f   nginx     "/docker-entrypoint.…"   2 hours ago   Up 2 hours   0.0.0.0:3344->80/tcp, :::3344->80/tcp   nginx01
+[root@VM-24-12-centos ~]# docker ps -aq
+a7c27690811f
+06d8501403aa
+[root@VM-24-12-centos ~]# docker exec -it a7c27690811f /bin/bash
+root@a7c27690811f:/# whereis nginx 
+nginx: /usr/sbin/nginx /usr/lib/nginx /etc/nginx /usr/share/nginx
+root@a7c27690811f:/# cd /etc/nginx
+root@a7c27690811f:/etc/nginx# ls
+conf.d          mime.types  nginx.conf   uwsgi_params
+fastcgi_params  modules     scgi_params
+root@a7c27690811f:/etc/nginx# 
+
+# 5、上面容器运行相当于一个服务，通过宿主机与容器端口映射，可以在公网访问容器。
+# 但是如果服务停止了，那么久无法从浏览器中访问到服务器的3344端口了，进而也就无法访问到容器内了。
 ```
 
-端口暴露的概念
+
+
+**端口暴露的概念**
 
 ![img](img/1637808213694-7fe7e39c-f6c4-490d-b015-ad33109bc226.png)
 
@@ -1424,6 +1488,2422 @@ root@823afc203db7:/# whereis nginx
 **挂载出来** `**-v /usr/share/nginx /usr/nginx**` **，只需要在本地修改科技，容器内会自动同步。**
 
 **Nginx配置文件在 /etc/nginx/nginx.conf**
+
+
+
+
+
+### 4.2 Tomcat
+
+```shell
+# 官方使用
+docker run -it --rm tomcat:9.0
+
+# 之前启动都是后台，停止了容器之后，容器还是可以查到
+--rm  一般用来测试，用完即删除
+
+# 下载并启动
+docker pull tomcat:9.0
+
+# 启动运行
+docker run -d -p 3355:8080 --name tomcat01 tomcat
+
+# 测试访问没有问题，
+[root@VM-0-17-centos docker-learn]# docker exec -it tomcat01 /bin/bash
+root@d3cbd9a5642f:/usr/local/tomcat# ls
+BUILDING.txt     LICENSE  README.md      RUNNING.txt  conf  logs            temp     webapps.dist
+CONTRIBUTING.md  NOTICE   RELEASE-NOTES  bin          lib   native-jni-lib  webapps  work
+root@d3cbd9a5642f:/usr/local/tomcat# ls -l
+total 160
+-rw-r--r-- 1 root root 18994 Nov  9 22:12 BUILDING.txt
+-rw-r--r-- 1 root root  6210 Nov  9 22:12 CONTRIBUTING.md
+-rw-r--r-- 1 root root 60269 Nov  9 22:12 LICENSE
+-rw-r--r-- 1 root root  2333 Nov  9 22:12 NOTICE
+-rw-r--r-- 1 root root  3372 Nov  9 22:12 README.md
+-rw-r--r-- 1 root root  6905 Nov  9 22:12 RELEASE-NOTES
+-rw-r--r-- 1 root root 16517 Nov  9 22:12 RUNNING.txt
+drwxr-xr-x 2 root root  4096 Nov 18 14:49 bin
+drwxr-xr-x 1 root root  4096 Nov 25 02:54 conf
+drwxr-xr-x 2 root root  4096 Nov 18 14:49 lib
+drwxrwxrwx 1 root root  4096 Nov 25 02:54 logs
+drwxr-xr-x 2 root root  4096 Nov 18 14:49 native-jni-lib
+drwxrwxrwx 2 root root  4096 Nov 18 14:49 temp
+drwxr-xr-x 2 root root  4096 Nov 18 14:49 webapps
+drwxr-xr-x 7 root root  4096 Nov  9 22:12 webapps.dist
+drwxrwxrwx 2 root root  4096 Nov  9 22:12 work
+root@d3cbd9a5642f:/usr/local/tomcat# cd webapps
+root@d3cbd9a5642f:/usr/local/tomcat/webapps# ls
+
+# 发现问题：1、linux命令少了 2、没有webapps ==>> 阿里云镜像的原因：默认是最小的镜像，所有不必要的都剔除了，保证最小可运行的环境。
+```
+
+**问题：每次进入容器修改十分麻烦。应在容器外部提供一个映射路径，webapps，外部放置项目，自动同步到内部即可。**
+
+
+
+### 4.3 ES + Kibana
+
+- es 暴露的端口很多！
+- es 十分耗内存！
+- es 的数据一般需要防止到安全目录！挂载
+
+```shell
+# --net somenetwork ? 网络配置
+
+# 启动 elasticsearch
+docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:7.6.2
+
+# 测试
+[root@VM-0-17-centos docker-learn]# curl localhost:9200
+{
+  "name" : "5e91e22d082d",
+  "cluster_name" : "docker-cluster",
+  "cluster_uuid" : "l-2zcG0ATHSNgDJdflIIwg",
+  "version" : {
+    "number" : "7.6.2",
+    "build_flavor" : "default",
+    "build_type" : "docker",
+    "build_hash" : "ef48eb35cf30adf4db14086e8aabd07ef6fb113f",
+    "build_date" : "2020-03-26T06:34:37.794943Z",
+    "build_snapshot" : false,
+    "lucene_version" : "8.4.0",
+    "minimum_wire_compatibility_version" : "6.8.0",
+    "minimum_index_compatibility_version" : "6.0.0-beta1"
+  },
+  "tagline" : "You Know, for Search"
+}
+
+# 查看 docker stats
+CONTAINER ID   NAME            CPU %     MEM USAGE / LIMIT   MEM %     NET I/O          BLOCK I/O        PIDS
+5e91e22d082d   elasticsearch   0.99%     1.273GiB / 3.7GiB   34.40%    1.18kB / 942B    71.4MB / 729kB   44
+d3cbd9a5642f   tomcat01        0.21%     174.4MiB / 3.7GiB   4.60%     28.3kB / 142kB   2.85MB / 0B      34
+# 由于耗内存，所以需要增加内存的限制，修改配置文件
+-e 环境配置修改
+-e ES_JAVA_OPTS="-Xms64m -Xms512m"
+docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xmx512m" elasticsearch:7.6.2
+```
+
+使用 Kibana 连接 es。
+
+**问题：如何跨容器实现网络连接？**
+
+![img](img/1637813047000-e126696f-8c3c-40c8-bbfc-8eeed33b39d1.png)
+
+
+
+## 五、可视化
+
+- portainer（先用这个）
+- Rancher（CI/CD再用）
+
+
+
+### 5.1 portainer
+
+Docker图形化界面管理工具。
+
+提供一个后台面板操作。
+
+--restart 自启动
+
+--v  挂载到本地，实现同步
+
+--privileged  设置权限
+
+```shell
+# 下载启动
+docker run -d -p 8088:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock --privileged=true portainer/portainer
+```
+
+外网地址：ip:8088
+
+账号：admin
+
+密码：admin123
+
+![img](img/1637813656808-71932854-7bde-45d5-bdde-bbd6f2ed7ae0.png)
+
+选择Local，进入可视化管理页面。
+
+![img](img/1637813822956-6473f2d4-cbb5-4b81-a056-a6d62998cb0f.png)
+
+
+
+## 六、Docker镜像讲解
+
+### 6.1 镜像是什么
+
+镜像是一种轻量级、可执行的独立软件包，用来打包软件运行环境和基于运行环境开发的软件，它包含运行某个软件所需的所有内容，包括代码、运行时、库、环境变量和配置文件。
+
+**==> 所有的应用，直接打包docker镜像，就可以直接跑起来！**
+
+如何得到镜像：
+
+- 从远程仓库下载
+- 朋友拷贝
+- 自己制作一个镜像 DockerFile
+
+
+
+### 6.2 Docker镜像加载原理
+
+UnionFS（联合文件系统）
+
+UnionFS（联合文件系统）：Union文件系统（UnionFS）是一种分层、轻量级并且高性能的文件系统，它支持对文件系统的修改作为一次提交来一层层的叠加，同时，可以将不同目录挂载到同一个虚拟文件系统下（unite serveral directories into a single virtual filesystem）。Union文件系统是 Docker 镜像的基础。镜像可以通过分层来进行集成，基于基础镜像（没有父镜像），可以制作各种具体的应用镜像。
+
+**特性**：一次同时加载多个文件系统，但从外面看起来，只能看到一个文件系统，联合加载会把各层文件系统叠加起来，这样最终的文件系统会包含所有底层的文件和目录。
+
+
+
+Docker镜像加载原理
+
+Docker 的镜像实际上由一层一层的文件系统组成，这样的层级文件系统UnionFS。
+
+
+
+bootfs（boot file system，引导加载器）主要包含bootloader和kernel。bootloader主要是引导加载kernel，Linux刚启动时会加载bootfs文件系统，在Docker镜像的最底层是bootfs。这一层与我们典型的Linux/Unix系统是一样的，包含boot加载器和内核。当boot加载完成之后，整个内核就都在内存中了。此时内存的使用权已由bootfs转交给内核，此时系统也会卸载bootfs。
+
+
+
+rootfs（root file system），在bootfs之上。包含的就是典型的Linux系统中的/dev、/proc、/bin、/etc等标准目录和文件。rootfs就是各种不同的操作系统发行版，比如Ubuntu、Centos等。
+
+![img](img/1637814953855-da728af8-046a-49b8-b842-0aff2a515e6c.png)
+
+平时安装虚拟机的CentOS都是几个G，为什么Docker这里只有200M？
+
+![img](img/1637815027583-a45efe9f-ef4e-4329-b786-5c56d1b42fec.png)
+
+对于一个精简的OS，rootfs可以很小，只需要包含最基本的命令、工具和程序库即可。因为底层直接用Host（宿主机）的kernel，自己只需要提供rootfs就可以了。由此可见对于不同的linux发行版，bootfs基本是一致的，rootfs会有差别，因此不同的发行版可以公用bootfs。
+
+
+
+### 6.3 分层理解
+
+分层的镜像
+
+下载一个镜像，观察下载的日志输出，可以看到是一层一层的在下载。
+
+![img](img/1637815244334-1de579d1-2330-48da-98c9-68fc9f2a8f8c.png)
+
+**问题：为什么Docker镜像要采用这种分层的结构？**
+
+最大的好处，莫过于**资源共享**！比如有多个镜像都是从相同的Base镜像构建而来的，那么宿主机只需在磁盘上保留一份Base镜像，同时内存中也只需要加载一份Base镜像，这样就可以为所有的容器服务了，而且镜像的每一层都可以被共享。
+
+可以通过 docker image inspect 命令查看镜像分层。
+
+```shell
+[root@VM-0-17-centos docker-learn]# docker image inspect redis:latest
+[
+    {
+				// ...
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:e1bbcf243d0e7387fbfe5116a485426f90d3ddeb0b1738dca4e3502b6743b325",
+                "sha256:58e6a16139eebebf7f6f0cb15f9cb3c2a4553a062d2cbfd1a782925452ead433",
+                "sha256:503a5c57d9786921c992b7b2216ae58f69dcf433eedb28719ddea3606b42ce26",
+                "sha256:277199a0027e044f64ef3719a6d7c3842e99319d6e0261c3a5190249e55646cf",
+                "sha256:d0d567a1257963b9655dfceaddc76203c8544fbf6c8672b372561a3c8a3143d4",
+                "sha256:a7115aa098139866d7073846e4321bafb8d5ca0d0f907a3c9625f877311bee7c"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "0001-01-01T00:00:00Z"
+        }
+    }
+]
+```
+
+**理解：**
+
+所有的 Docker 镜像都起始于一个基础镜像层，当进行修改或增加新的内容时，就会在当前镜像层之上，创建新的镜像层。
+
+举一个简单的例子，假如基于 Ubuntu Linux 16.04 创建一个新的镜像，这就是新镜像的第一层；如果在该镜像中添加 Python 包，就会在基础镜像层之上创建第二个镜像层；如果继续添加一个安全补丁，就会创建第三个镜像层。
+
+该镜像当前已经包含 3 个镜像层，如下图所示。
+
+![img](img/1637815602294-a91ec54e-2817-4b22-a6a3-e2d4064f4237.png)
+
+在添加额外的镜像层的同时，镜像始终保持是当前所有镜像的组合，理解这一点非常重要。下图中举了一个简单的例子，每个镜像层包含 3 个文件，而镜像包含了来自两个镜像层的 6 个文件。
+
+![img](img/1637815716521-d97210bf-ae90-4420-bdc5-ba0e8f69d662.png)
+
+上图中的镜像层跟之前图中的略有区别，主要目的是便于展示文件。
+
+下图中展示了一个稍微复杂的三层镜像，在外部看来整个镜像只有6个文件，这是因为最上层的文件 7 是 文件 5 的一个更新版本。
+
+![img](img/1637815823695-af4e74ef-815a-4349-a1c2-88ebe5e7798d.png)
+
+这种情况下，上层镜像层中的文件覆盖了底层镜像层中的文件。这样就使得文件的更新版本作为一个新镜像层添加到镜像当中。
+
+Docker 通过存储引擎（新版本采用快照机制）的方式来实现镜像层堆栈，并保证多镜像层对外展示为统一的文件系统。
+
+Linux上可用的存储引擎有 AUFS、Overlay2、Device Mapper、Btrfs以及 ZFS。顾名思义，每种存储引擎都基于Linux中对应的文件系统或块设备技术，并且每种存储引擎都有其独有的性能特点。
+
+Docker 在Windows上仅支持 windowsfilter 一种存储引擎。该引擎基于 NTFS 文件系统之上实现了分层和CoW。
+
+下图展示了域系统显示相同的三层镜像。所有镜像层堆叠并合并，对外提供统一的视图。
+
+![img](img/1637816041631-dd743a7b-a3f8-4f81-9d6e-539884328068.png)
+
+特点
+
+Docker镜像都是只读的，当容器启动时，一个新的可写层被加载到镜像的顶部！
+
+这一层就是通常说的**容器层**，容器之下都叫镜像层！
+
+![img](img/1637816190079-8e399b9b-4d4b-44f8-93e0-2d5d99af46fd.png)
+
+### 6.4 commit镜像（提交自己的镜像）
+
+```shell
+docker commit 提交容器成为一个新的副本
+
+# 命令和git原理类似
+docker commit -m="提交的描述信息" -a="作者" 容器id 目标镜像名:[TAG]
+```
+
+测试
+
+```shell
+# 1、启动一个默认的tomcat
+
+# 2、发现这个默认的tomcat 是没有webapps应用的（镜像原因，官方镜像默认webapps下没有文件）
+
+# 3、自己拷贝了基本文件到webapps
+
+# 4、提交自己的版本为一个镜像。以后使用自己修改过的镜像即可。
+[root@VM-0-17-centos docker-learn]# docker commit -a="sugar" -m="add webapps" f332d94a25ba tomcat02:1.0
+sha256:aa3a0273e4f475774fa9b62544ed96c5c8c6e872e81a1b6da3328f85d8f0f883
+
+# 查看镜像列表，发现tomcat02
+[root@VM-0-17-centos docker-learn]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+tomcat02              1.0       aa3a0273e4f4   5 seconds ago   684MB
+tomcat                9.0       76206e3ba4b1   6 days ago      680MB
+tomcat                latest    904a98253fbf   6 days ago      680MB
+redis                 latest    40c68ed3a4d2   7 days ago      113MB
+nginx                 latest    ea335eea17ab   8 days ago      141MB
+centos                latest    5d0da3dc9764   2 months ago    231MB
+portainer/portainer   latest    580c0e4e98b0   8 months ago    79.1MB
+elasticsearch         7.6.2     f29a1ee41030   20 months ago   791MB
+```
+
+如果需要保存当前容器的状态，就可以通过commit来提交，获得一个镜像。
+
+
+
+## 七、容器数据卷
+
+### 7.1 什么是容器数据卷
+
+##### docker的理念
+
+将应用和环境打包成一个镜像！
+
+数据？如果数据都在容器中，那么容器删除，数据就会丢失！
+
+需求：数据可以持久化
+
+MySQL，容器删了，数据也没了！需求：MySQL数据可以存储在本地！
+
+容器之间可以有一个数据共享的技术！Docker容器中产生的数据，同步到本地！
+
+==> 卷技术！（本质上是目录的挂载，将容器的目录，挂载到Linux上）
+
+![img](img/1637839099632-589b3cb4-1af3-483b-94f0-9b3c8b2e0bf4.png)
+
+**总结：容器的持久化和同步操作！容器间也是可以数据共享的。**
+
+
+
+### 7.2 使用数据卷
+
+方式一：直接使用命令来挂载  -v
+
+方式二：DockerFile
+
+```shell
+docker run -it -v 主机目录:容器内目录
+
+# 测试
+[root@VM-0-17-centos docker-learn]# docker run -it -v /mnt/docker-learn:/home centos /bin/bash
+
+# 查看容器内的映射地址，发现数据已同步过来
+[root@a01401dff51e /]# cd /home/
+[root@a01401dff51e home]# ls
+sugar.java  test.java
+```
+
+启动后，通过 docker inspect 查看挂载信息
+
+![img](img/1637839476897-f34e9343-38ea-4b08-9c90-22cda7b15d8c.png)
+
+测试文件同步，无论是从容器写数据，还是在宿主机写数据，数据都会即时同步，因为容器用的就是这块目录。
+
+![img](img/1637839573004-b73a78e1-9963-458a-be1e-3cc4e445a055.png)
+
+容器停止后，主机上的数据不会被删除；容器未启动，主机上修改数据，然后容器启动，可以看到数据变化。
+
+**好处：以后只需要在本地修改即可，容器内会自动同步。**
+
+
+
+### 7.3 实战：安装MySQL（解决数据持久化问题）
+
+MySQL的数据持久化问题。
+
+```shell
+# 获取镜像
+docker pull mysql:5.7
+
+# 运行容器，需要做数据挂载！
+# 安装启动MySQL，需要配置密码的，注意！
+-d 后台运行
+-p 端口映射
+-v 数据卷挂载
+-e 环境配置
+--name 容器名字
+docker run -d -p 3310:3306 -v /mnt/docker-learn/mysql/conf:/etc/mysql/conf.d -v /mnt/docker-learn/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql:5.7
+
+# 使用本地 Navicat连接
+```
+
+![img](img/1637840481205-784cd79b-aad7-45c2-ac3e-6d98de8db77a.png)
+
+```shell
+# 在Navicat新建数据库后，看到 /mnt/docker-learn/mysql/data下多了新文件夹
+
+docker rm -f mysql01
+# 即使停掉容器，删除镜像，数据依然存在。
+```
+
+
+
+### 7.4 具名和匿名挂载
+
+```shell
+# 匿名挂载
+-v 容器内路径
+docker run -d -P --name nginx01 -v /etc/nginx nginx
+
+# 查看所有卷的情况
+[root@VM-0-17-centos data]# docker volume ls
+DRIVER    VOLUME NAME
+local     21f248bbbc0fb9f88400c6a29afd21444631fea2fee566d527f0aa020fd750e4
+local     55564b300470429fbbe000490528c3b4abff5badb18542db4bd55aab643aceb0
+
+# 这种都是匿名挂载，我们在 -v时只写了容器内的路径，没有写容器外的路径！
+
+# 具名挂载
+# 通过 -v 卷名:容器内路径 指定
+[root@VM-0-17-centos data]# docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx nginx
+a9e2ff7d528a8e19ed10ea307494da1f188116e347d6082c2826c1432da51589
+# 可以看到具名挂载的卷名
+[root@VM-0-17-centos data]# docker volume ls
+DRIVER    VOLUME NAME
+local     21f248bbbc0fb9f88400c6a29afd21444631fea2fee566d527f0aa020fd750e4
+local     55564b300470429fbbe000490528c3b4abff5badb18542db4bd55aab643aceb0
+local     juming-nginx
+```
+
+![img](img/1637842397591-fd43a829-802a-4a47-ac45-2652335dab40.png)
+
+所有的 Docker容器内的卷，没有指定目录的情况下都是在 `/var/lib/docker/volumes/xxx/_data`
+
+通过具名挂载，可以方便的找到我们的一个卷，大多数情况都使用`具名挂载`
+
+```shell
+如何确定是具名挂载还是匿名挂载，还是指定路径挂载？
+-v 容器内路径  # 匿名挂载
+-v 卷名: 容器内路径  # 具名挂载
+-v /宿主机路径:容器内路径  # 指定路径挂载
+```
+
+拓展：
+
+```shell
+# 通过 -v 容器内路径， ro rw改变读写权限
+ro readonly  # 只读
+rw readwrite # 可读可写
+# 一旦设定了容器权限，容器对我们挂载出来的内容就有限定了！
+
+docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx:ro nginx
+docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx:rw nginx
+
+# ro：只要看到ro，就说明这个路径只能通过宿主机来操作容器内部是无法操作的！
+```
+
+### 
+
+### 7.5 DockerFile数据卷
+
+DockerFile 就是用来构建 docker 镜像的构造文件！命令脚本！
+
+通过这个脚本，可以生成镜像，镜像是一层层的，脚本是一个个的命令。
+
+```shell
+# 创建一个 dockerfile文件，名字可以随机，建议 DockerFile
+# 文件中的内容
+# 指令（大写） 参数
+FROM centos
+
+VOLUME ["volume01", "volume02"]  # 匿名挂载
+
+CMD echo "-----end------"
+CMD /bin/bash
+# 这里的每个命令，就是镜像的一层
+```
+
+![img](img/1637844146741-ef6db930-35a8-4a12-8721-787276a1c347.png)
+
+```shell
+# 启动自己写的容器
+docker run -it 6903c26a0b45
+```
+
+![img](img/1637844274707-bab63319-833a-4188-9333-9b2600d5c633.png)
+
+这个卷和外部一定有一个同步的目录！
+
+查看卷挂载的路径
+
+![img](img/1637844431526-2685a795-45ca-4950-b185-73a5f6439460.png)
+
+测试一下刚才的文件是否同步出去了
+
+![img](img/1637844465194-b7ab54bc-80ff-4417-b8b0-fb7bcd23f773.png)
+
+可以看到挂载成功！
+
+
+
+未来这种方式使用的十分多，因为通常会构建自己的镜像！
+
+假设构建镜像时候没有挂载卷，要手动镜像挂载，-v 卷名:容器内路径！
+
+
+
+### 7.6 数据卷容器
+
+两个MySQL同步数据！
+
+![img](img/1637844663401-7dabbc3e-9c0e-4bfb-8988-6b7983a1a885.png)
+
+
+
+启动docker01
+
+![img](img/1637844756869-3a85efc6-3d08-49ce-b6de-ab0ffb272d1c.png)
+
+启动docker02，设置volumes-from docker01。
+
+在docker01中，到volume01下创建文件docker01，在docker02中同样可见，容器间挂载成功。
+
+![img](img/1637844910040-b827a3b4-d43a-4145-bc96-7892c31f3205.png)
+
+容器间的挂载类似于Java的继承关系。
+
+![img](img/1637845010601-c5566b1c-56a2-4ea7-95af-2d528429060e.png)
+
+再运行一个docker03，挂载docker01，文件也能够同步过来。
+
+![img](img/1637845263343-7e850677-2850-4810-a1a3-f3301b3c5b2d.png)
+
+```shell
+# 测试：删除docker01，查看一下docker02和docker03，是否还可以访问这个文件
+
+# 结果：依旧可以访问
+```
+
+![img](img/1637845418372-59ec10cf-59fd-4b55-aa43-2245c780689b.png)
+
+### 7.7 多个MySQL实现数据共享
+
+```shell
+# 启动mysql01
+docker run -d -p 3310:3306 -v /mnt/docker-learn/mysql/conf:/etc/mysql/conf.d -v /mnt/docker-learn/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql:5.7
+
+# 启动mysql02，挂载到mysql01
+docker run -d -p 3310:3306 -e MYSQL_ROOT_PASSWORD=123456 --name mysql02 --volumes-from mysql01 mysql:5.7
+
+# 此时，可以实现两个容器数据同步
+```
+
+
+
+### 7.8 小结
+
+容器之间配置信息的传递，数据卷容器的生命周期一直持续到没有容器使用为止。
+
+一旦持久化了本地，本地的数据是不会被删除的！
+
+
+
+## 八、DockerFile
+
+### 8.1 DockerFile介绍
+
+DockerFile 是用来构建Docker镜像的文件！命令参数脚本！
+
+构建步骤：
+
+1. 编写一个 dockerfile 文件
+2. `docker build`构建成为一个镜像
+3. `docker run`运行镜像
+4. `docker push`发布镜像（DockerHub、阿里云镜像仓库）
+
+
+
+官方做法：
+
+![img](img/1637892677270-680fda99-c741-40a7-ab4c-017bf6166cb7.png)
+
+![img](img/1637892714211-ae1ca362-0b70-4c8a-aa5f-3a636e2115eb.png)
+
+官方镜像都是基础包，很多功能没有，需要自己搭建自己的镜像。
+
+一般 centos + jdk + tomcat + MySQL + redis。
+
+
+
+### 8.2 DockerFile构建过程
+
+**基础知识：**
+
+1. 每个保留关键字（指令）都必须是大写字母
+2. 按照从上到下顺序执行
+3. \#表示注释
+4. 每一个指令都会创建提交一个新的镜像层，并提交！
+
+![img](img/1637893142983-7789e90d-4cf9-4bda-851e-8eda8e3ec809.png)
+
+
+
+dockerfile是面向开发的，以后要发布项目，做镜像，就需要编写dockerfile文件。十分简单！
+
+Docker镜像成为企业交付的标准。
+
+**步骤：开发、部署、运维**
+
+DockerFile：构建文件，定义了一些的步骤，源代码
+
+Docker Images：通过 DockerFile 构建生成的镜像，最终发布和运行的产品，原来是jar、war包
+
+Docker容器：容器就是镜像运行起来提供服务器
+
+
+
+### 8.3 DockerFile指令
+
+```shell
+FROM     			# 基础镜像，一切从这里开始构建
+MAINTAINER		# 镜像是谁写的，姓名+邮箱
+RUN						# 镜像构建的时候需要运行的命令
+ADD						# 步骤，tomcat镜像，这个tomcat压缩包，就是添加内容
+WORDDIR				# 镜像的工作目录
+VOLUME				# 挂载的目录
+EXPOSE				# 暴露端口
+RUN					
+CMD						# 指定这个容器启动的时候要运行的命令，只有最后一个会生效，可被替代
+ENTRYPOINT		# 指定这个容器启动的时候要运行的命令，可以追加命令
+ONBUILD				# 当构建一个被继承 DockerFile 这个时候就会执行 ONBUILD 的指令。（触发指令）
+COPY					# 类似ADD，将文件拷贝到镜像中
+ENV						# 构建的时候设置环境变量
+```
+
+![img](img/1637893379662-a5c1a981-113c-45d2-843a-c5ef3e039be5.png)
+
+
+
+### 8.4 实战：Centos镜像
+
+`FROM scratch` Docker Hub中 99% 镜像都是从这个基础镜像过来的，然后配置需要的软件和配置来进行构建的。
+
+![img](img/1637893928140-0e8be7bb-0cfd-4c96-8820-a84a3cc57e1f.png)
+
+创建一个自己的centos
+
+```shell
+# 1、编写 dockerfile 文件
+[root@VM-0-17-centos docker-test-volume]# cat dockerfile-centos
+FROM centos
+MAINTAINER sugar<406857586@qq.com>
+
+ENV MYPATH /usr/local
+WORKDIR $MYPATH
+
+RUN yum -y install vim
+RUN yum -y install net-tools
+
+EXPOSE 80
+
+CMD echo $MYPATH
+CMD echo "---end---"
+CMD /bin/bash
+
+# 2、构建镜像
+[root@VM-0-17-centos docker-test-volume]# docker build -f dockerfile1 -t sugar/centos:1.0 .
+// ....
+Successfully built 3e201d4dfcf1
+Successfully tagged mycentos:0.1
+
+# 3、测试运行
+[root@VM-0-17-centos dockerfile]# docker run -it mycentos:0.1
+# 工作目录变为了 /usr/local
+[root@0ffcc43c66c2 local]# pwd
+/usr/local
+# ifconfig命令可用了
+[root@0ffcc43c66c2 local]# ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.18.0.5  netmask 255.255.0.0  broadcast 172.18.255.255
+        ether 02:42:ac:12:00:05  txqueuelen 0  (Ethernet)
+        RX packets 8  bytes 656 (656.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 0  bytes 0 (0.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+# 4、通过 docker history 查看镜像构建历史
+[root@VM-0-17-centos dockerfile]# docker history mycentos:0.1
+IMAGE          CREATED         CREATED BY                                      SIZE      COMMENT
+3e201d4dfcf1   4 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "/bin…   0B        
+641edfbfbd91   4 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
+4df1f95bb0ec   4 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
+42e158a18f95   4 minutes ago   /bin/sh -c #(nop)  EXPOSE 80                    0B        
+fe827f5bd8a0   4 minutes ago   /bin/sh -c yum -y install net-tools             26.9MB    
+9a37001535fc   4 minutes ago   /bin/sh -c yum -y install vim                   63.9MB    
+dfb3d3861248   4 minutes ago   /bin/sh -c #(nop) WORKDIR /usr/local            0B        
+f4f2026165e4   4 minutes ago   /bin/sh -c #(nop)  ENV MYPATH=/usr/local        0B        
+6aa45f68d085   4 minutes ago   /bin/sh -c #(nop)  MAINTAINER sugar<40685758…   0B        
+5d0da3dc9764   2 months ago    /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B        
+<missing>      2 months ago    /bin/sh -c #(nop)  LABEL org.label-schema.sc…   0B        
+<missing>      2 months ago    /bin/sh -c #(nop) ADD file:805cb5e15fb6e0bb0…   231MB    
+```
+
+### 8.5 CMD 和 ENTRYPOINT 区别
+
+```shell
+CMD						# 指定这个容器启动的时候要运行的命令，只有最后一个会生效，可被替代
+ENTRYPOINT		# 指定这个容器启动的时候要运行的命令，可以追加命令
+```
+
+测试CMD
+
+```shell
+# 编写 dockerfile 文件
+[root@VM-0-17-centos dockerfile]# cat dockerfile-cmd-test 
+FROM centos
+CMD ["ls", "-a"]
+
+# 构建镜像
+[root@VM-0-17-centos dockerfile]# docker build -f dockerfile-cmd-test -t cmdtest .
+
+# 运行，发现 ls -a生效
+[root@VM-0-17-centos dockerfile]# docker run 2217d88957de
+.
+..
+.dockerenv
+bin
+dev
+etc
+home
+
+# 想追加一个命令 -l（ls -al），失败
+[root@VM-0-17-centos dockerfile]# docker run 2217d88957de -l
+docker: Error response from daemon: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "-l": executable file not found in $PATH: unknown.
+ERRO[0000] error waiting for container: context canceled 
+
+# cmd的清理下， -l 替换了CMD ["ls", "-a"]命令，-l 不是命令，所以报错。
+# 以下命令可以执行
+[root@VM-0-17-centos dockerfile]# docker run 2217d88957de ls -al
+```
+
+测试ENTRYPOINT
+
+```shell
+# 编写文件
+[root@VM-0-17-centos dockerfile]# cat dockerfile-cmd-entrypoint 
+FROM centos
+ENTRYPOINT ["ls", "-a"]
+
+# 构建镜像
+[root@VM-0-17-centos dockerfile]# docker build -f dockerfile-cmd-entrypoint -t entrypoint-test .
+
+# 运行
+[root@VM-0-17-centos dockerfile]# docker run 18c29b6e837b
+.
+..
+.dockerenv
+bin
+dev
+etc
+
+# 追加命令 -l 生效
+[root@VM-0-17-centos dockerfile]# docker run 18c29b6e837b -l
+total 56
+drwxr-xr-x   1 root root 4096 Nov 26 02:54 .
+drwxr-xr-x   1 root root 4096 Nov 26 02:54 ..
+-rwxr-xr-x   1 root root    0 Nov 26 02:54 .dockerenv
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  340 Nov 26 02:54 dev
+drwxr-xr-x   1 root root 4096 Nov 26 02:54 etc
+```
+
+DockerFile中很多命令十分相似，需要了解区别。
+
+
+
+### 8.6 实战：Tomcat镜像
+
+1. 准备镜像文件 tomcat压缩包、jdk压缩包
+   ![img](img/1637895765892-b57f05a3-3f4f-44d6-8b2c-e0feab1e6a9c.png)
+2. 编写 dockerfile 文件，官方命令 `Dockerfile`，build 会自动寻找这个文件，就不需要 -f 指定了！
+
+```shell
+[root@VM-0-17-centos build_tomcat]# cat Dockerfile 
+FROM centos
+MAINTAINER sugar<406857586@qq.com>
+
+COPY readme.txt /usr/local/readme.txt
+
+ADD jdk-8u221-linux-x64.tar.gz /usr/local/
+ADD apache-tomcat-9.0.55.tar.gz /usr/local/
+
+RUN yum -y install vim
+
+ENV MYPATH /usr/local
+WORKDIR $MYPATH
+
+ENV JAVA_HOME /usr/local/jdk1.8.0_221
+ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+ENV CATALINA_HOME /usr/local/apache-tomcat-9.0.55
+ENV CATALINA_BASH /usr/local/apache-tomcat-9.0.55
+ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+
+EXPOSE 8080
+
+CMD /usr/local/apache-tomcat-9.0.55/bin/startup.sh && tail -F /url/local/apache-tomcat-9.0.55/bin/logs/catalina.out
+```
+
+1. 构建镜像
+
+```shell
+docker build -t diytomcat .
+```
+
+1. 运行镜像
+
+```shell
+docker run -d -p 9090:8080 --name sugartomcat -v /mnt/docker-learn/dockerfile/build_tomcat/test:/usr/local/apache-tomcat-9.0.55/webapps/test -v /mnt/docker-learn/dockerfile/build_tomcat/logs:/usr/local/apache-tomcat-9.0.55/logs diytomcat
+```
+
+1. 访问测试
+
+```shell
+# 访问生效
+docker ps
+curl localhost:9191/api?
+```
+
+1. 在Tomcat发布项目（由于做了卷挂载，所以可直接在本地编写项目，放到挂载路径下就可以发布了！）
+
+web.xml
+
+```shell
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+         version="4.0">
+
+</web-app>
+```
+
+index.jsp
+
+```html
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>主页</title>
+</head>
+<body>
+  Hello World
+  <%
+     out.println("IP:" + request.getRemoteAddr());
+  %>
+</body>
+</html>
+```
+
+1. 访问 ip:9090/test，可以访问
+
+
+
+以后的开发步骤：掌握Dockerfile的编写。之后的一切都是使用docker镜像来发布运行！
+
+#### 
+
+### 8.7 发布镜像到DockerHub
+
+1. 地址：https://hub.docker.com
+2. 注册账号，并确定可以登录
+3. 在服务器上提交自己的镜像
+
+```html
+# 登录命令
+[root@VM-0-17-centos build_tomcat]# docker login --help
+
+Usage:  docker login [OPTIONS] [SERVER]
+
+Log in to a Docker registry.
+If no server is specified, the default is defined by the daemon.
+
+Options:
+  -p, --password string   Password
+      --password-stdin    Take the password from stdin
+  -u, --username string   Username
+
+[root@VM-0-17-centos build_tomcat]# docker login -u sugarbabyzz
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+```
+
+1. 登录完毕后，就可以提交镜像了 docker push
+
+```html
+# push自己的镜像到服务器上
+[root@VM-0-17-centos build_tomcat]# docker push diytomcat
+Using default tag: latest
+The push refers to repository [docker.io/library/diytomcat]
+e1346aad6f14: Preparing 
+c4d20380c6a8: Preparing 
+cef8323f5b7f: Preparing 
+57d2ad337b34: Preparing 
+74ddd0ec08fa: Preparing 
+denied: requested access to the resource is denied   # 被拒绝，没有带发布者信息
+
+# push镜像出现的问题
+[root@VM-0-17-centos build_tomcat]# docker push sugarbabyzz/diytomcat:1.0
+The push refers to repository [docker.io/sugarbabyzz/diytomcat]
+An image does not exist locally with the tag: sugarbabyzz/diytomcat
+
+# 解决：增加tag，注意用户名与/前的用户名一定要一致
+[root@VM-0-17-centos build_tomcat]# docker tag ad611843cdae sugarbabyzz/tomcat:1.0
+[root@VM-0-17-centos build_tomcat]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+diytomcat             latest    ad611843cdae   2 hours ago     718MB
+sugarbabyzz/tomcat          1.0       ad611843cdae   2 hours ago     718MB
+
+# 再发布
+[root@VM-0-17-centos build_tomcat]# docker push sugarbabyzz/tomcat:1.0
+```
+
+
+
+### 8.8 发布镜像到阿里云容器服务
+
+1. 登录阿里云
+2. 找到 控制台-容器镜像服务
+3. 创建命名空间
+   ![img](img/1637906618825-ba7dda9d-e4a1-40f3-995a-2682bd9cf32b.png)
+4. 创建容器镜像
+   ![img](img/1637906685649-ee57ea22-5506-43df-bb20-3a31c2cfa164.png)
+5. 浏览仓库页面信息
+   ![img](img/1637906754484-404cebff-c9d5-4485-b4b4-6debdede37f7.png)
+   ![img](img/1637906759419-aa2cc71a-6b7a-42d8-831a-32f99f78db37.png)
+6. 按步骤操作，将镜像push到阿里云仓库
+
+
+
+### 8.9 Docker所有流程小结
+
+
+
+![img](img/1637907115160-f034ce82-721d-4886-8af8-4c94927d74e4.png)
+
+
+
+
+
+
+
+## 九、Docker网络
+
+### 9.1 理解Docker0
+
+测试
+
+![img](img/1640678191927-2a80a720-e2d9-43b0-a029-52845413304e.png)
+
+**Docker是如何处理容器间网络访问的？**
+
+![img](img/1640678319827-5c66615b-8424-483a-9cc2-1686617826f4.png)
+
+
+
+```powershell
+# 创建tomcat容器
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat01 tomcat
+
+# 查看容器内部的网络地址  ip addr
+# 发现容器启动的时候，会得到一个    eth0@if31:   ip地址，docker分配的！
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat01 ip addr
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+30: eth0@if31: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+       valid_lft forever preferred_lft forever
+
+
+# 思考，linux能否ping通容器内部！
+[sugar@iZ749i4volw5sfZ docker-learn]$ ping 172.17.0.2
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.053 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.072 ms
+
+# linux 可以 ping通 docker 容器内部
+
+# 可见，172.17.0.2与 本机的docker0:172.17.0.1网络在同一网段，是可以ping通的
+```
+
+
+
+原理
+
+1. 每启动一个docker容器，docker就会给docker容器分配一个ip。只要安装了docker，就会有一个网卡 docker0，桥接模式，使用的技术是 evth-pair 技术！
+   再次测试 ip addr，多了一个地址，与容器内的地址一样。
+   ![img](img/1640679984038-92ad8f17-1b2b-4982-9dc0-8f8cb586903c.png)
+2. 再启动一个容器，就会又多一对网卡
+   ![img](img/1640680062765-30bf2c12-9527-452d-9c06-9d716269410a.png)
+
+```shell
+# 这些容器带来的网卡，都是一对一对的
+# evth-pair技术，就是一对的虚拟设备接口，成对出现，一端连着协议，一端彼此相连
+# 正因为这个特性，通常将 evth-pair 充当一个桥梁，连接各种虚拟网络设备的
+# OpenStack、Docker容器之间的链接，OVS的链接，都是使用 evth-pair技术
+```
+
+1. 测试 tomcat01 和 tomcat02是否可以ping通
+   ![img](img/1640680798495-de0dd549-a48b-4b79-b336-bd5674efe02d.png)
+
+**结论：容器和容器之间是可以互相ping通的。**
+
+
+
+![img](img/1640680988478-ba5beceb-931c-4b7c-8ad7-09f87d33cfb6.png)
+
+结论：tomcat01 和 tomcat02 是共用同一个路由器（docker0）。
+
+所有的容器在不指定网络的情况下，都是通过 docker0 路由的，docker会给容器分配一个默认的可用IP。
+
+
+
+小结
+
+- Docker使用的是Linux的桥接模式，宿主机中是一个Docker容器的网桥 docker0。大约能分配65535个。
+- Docker 中的所有网络接口都是虚拟的。因为虚拟的转发效率高。
+- 只要容器删除，对应的一对网桥就没了。
+
+
+
+![img](img/1640681247541-e84361e7-7649-4d77-b2eb-41bbcf2f855f.png)
+
+
+
+### 9.2 --link
+
+场景：编写了一个微服务，database url=ip:，项目不重启，数据库ip换掉了，希望可以处理这个问题，通过名字来进行访问容器
+
+==> link
+
+```bash
+# 直接ping服务名不通
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat02 ping tomcat01
+ping: tomcat01: Name or service not known
+
+# 如何解决？ --link
+
+# 通过 --link解决ping通问题
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat03 --link tomcat02 tomcat_ip:1.0
+
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat03 ping tomcat02
+PING tomcat02 (172.17.0.3) 56(84) bytes of data.
+64 bytes from tomcat02 (172.17.0.3): icmp_seq=1 ttl=64 time=0.101 ms
+64 bytes from tomcat02 (172.17.0.3): icmp_seq=2 ttl=64 time=0.058 ms
+
+# 反向可以ping通吗？不行
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat02 ping tomcat03
+ping: tomcat03: Name or service not known
+
+# 查看docker网络配置
+docker network inspect 容器ID
+```
+
+![img](img/1640682097754-621dfd94-2675-48f8-ba26-3efb00eaf0ec.png)
+
+![img](img/1640682119912-87d8ad05-0ed6-4396-bf5e-21d7f6cf8ec8.png)
+
+tomcat03在本地配置了tomcat02的地址。
+
+```bash
+# 查看hosts配置，发现原理！
+# --link就是在hosts配置中，增加了一个172.17.0.3 tomcat028的配置。
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat03 cat /etc/hosts
+127.0.0.1       localhost
+::1     localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+172.17.0.3      tomcat02 f7eeff808d50
+172.17.0.4      dfb24685524e
+```
+
+目前Docker开发已经不建议使用 --link了。
+
+需要自定义网络！不使用docker0！
+
+**docker0的局限性：**不支持容器名连接访问
+
+
+
+### 9.3 自定义网络
+
+查看所有的 docker 网络
+
+![img](img/1640682531109-50f312d4-a21e-4333-8dbf-8fc6197f6ce9.png)
+
+##### 网络模式
+
+- brige：桥接（默认），在docker上搭桥，0.1和0.2通过docker互联
+- none：不配置网络
+- host：和宿主机共享网络
+- container：容器内网络连通（用得少，局限性较大）
+
+**docker0特点**
+
+- 默认
+- 域名不能访问
+- --link可以打通连接
+
+**测试**
+
+```shell
+# 直接启动的命令 --net bridge，这个就是我们的docker0
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat01 --net bridge tomcat_net:1.0
+
+# 我们可以自定义一个网络！
+# --driver bridge  桥接模式
+# --subnet 192.168.0.0/16  子网范围:192.168.0.2 ~ 192.168.255.255
+# --gateway 192.168.0.1  网关
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker network create --driver bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
+d5fb9a4a2ae701f80d79ffb1046a7ac4eb55ab237d7a0c086abbd394c89f5beb
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+79b01986d506   bridge    bridge    local
+25f2e1abb552   host      host      local
+d5fb9a4a2ae7   mynet     bridge    local
+a53f52a0a700   none      null      local
+```
+
+![img](img/1640683335686-1de24196-8459-4022-baba-17a8858b6d6f.png)
+
+至此，自己的网络就创建好了，后面的服务可以放在自己的网络中。
+
+```shell
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat-net-01 --net mynet tomcat_net:1.0
+a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat-net-02 --net mynet tomcat_net:1.0
+63a4d6ca7acc597df926ca9f4c2d9517c3712e55090abd51742d2523e26920a3
+# 用mynet新建的两个容器，网络地址都加入到 Containers中。
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker network inspect mynet
+[
+    {
+        "Name": "mynet",
+        "Id": "d5fb9a4a2ae701f80d79ffb1046a7ac4eb55ab237d7a0c086abbd394c89f5beb",
+        "Created": "2021-12-28T17:19:59.608285274+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "63a4d6ca7acc597df926ca9f4c2d9517c3712e55090abd51742d2523e26920a3": {
+                "Name": "tomcat-net-02",
+                "EndpointID": "ccf1ef6dd04d7ba743f2e73218c0d08a5ee5cefd33ee320da83bc828c18d4a47",
+                "MacAddress": "02:42:c0:a8:00:03",
+                "IPv4Address": "192.168.0.3/16",
+                "IPv6Address": ""
+            },
+            "a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a": {
+                "Name": "tomcat-net-01",
+                "EndpointID": "5d07a53c9261a2ae006a77189a38ac1f411762dc7f1bd50cb8f3d65214246db9",
+                "MacAddress": "02:42:c0:a8:00:02",
+                "IPv4Address": "192.168.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+
+# ping测试
+# 现在不使用 --link，也可以ping通容器名
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat-net-01 ping 192.168.0.3
+PING 192.168.0.3 (192.168.0.3) 56(84) bytes of data.
+64 bytes from 192.168.0.3: icmp_seq=1 ttl=64 time=0.062 ms
+64 bytes from 192.168.0.3: icmp_seq=2 ttl=64 time=0.066 ms
+
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat-net-01 ping tomcat-net-02
+PING tomcat-net-02 (192.168.0.3) 56(84) bytes of data.
+64 bytes from tomcat-net-02.mynet (192.168.0.3): icmp_seq=1 ttl=64 time=0.040 ms
+64 bytes from tomcat-net-02.mynet (192.168.0.3): icmp_seq=2 ttl=64 time=0.062 ms
+```
+
+自定义的网络docker已经帮我们维护好了对应的关系，推荐这样使用自定义网络。
+
+
+
+**好处：**
+
+搭建redis或mysql集群，让不同的集群使用不同的网络，保证集群是安全和健康的。
+
+
+
+
+
+### 9.4 网络联通
+
+对于不同网段的容器，是无法联通的。
+
+```shell
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat01 ping tomcat-net-01
+ping: tomcat-net-01: Name or service not known
+```
+
+解决问题的核心：**connect**
+
+![img](img/1640683971584-716020f5-2479-42b8-9ba5-082c13d0c10f.png)
+
+命令：
+
+![img](img/1640684000499-6ebbbbe2-8517-48e5-8974-14ae3e9716b0.png)
+
+```shell
+# 测试，打通 tomcat01 -> mynet
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker network connect mynet tomcat01
+# 连通之后，将tomcat01加入到 mynet 网络中
+# 一个容器两个ip地址！
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker network inspect mynet
+[
+    {
+        "Name": "mynet",
+        "Id": "d5fb9a4a2ae701f80d79ffb1046a7ac4eb55ab237d7a0c086abbd394c89f5beb",
+        "Created": "2021-12-28T17:19:59.608285274+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.168.0.0/16",
+                    "Gateway": "192.168.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "63a4d6ca7acc597df926ca9f4c2d9517c3712e55090abd51742d2523e26920a3": {
+                "Name": "tomcat-net-02",
+                "EndpointID": "ccf1ef6dd04d7ba743f2e73218c0d08a5ee5cefd33ee320da83bc828c18d4a47",
+                "MacAddress": "02:42:c0:a8:00:03",
+                "IPv4Address": "192.168.0.3/16",
+                "IPv6Address": ""
+            },
+            "a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a": {
+                "Name": "tomcat-net-01",
+                "EndpointID": "5d07a53c9261a2ae006a77189a38ac1f411762dc7f1bd50cb8f3d65214246db9",
+                "MacAddress": "02:42:c0:a8:00:02",
+                "IPv4Address": "192.168.0.2/16",
+                "IPv6Address": ""
+            },
+            "cd0bcbf7619fbf6f6d1f69b9c525daa810a4e2cb1af433e5e3c1612981670d18": {
+                "Name": "tomcat01",
+                "EndpointID": "76f992fdc4615f22971ac543f509dda0e41cfaf4859a8e4752bf4d35f8b5ff2a",
+                "MacAddress": "02:42:c0:a8:00:04",
+                "IPv4Address": "192.168.0.4/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
+
+![img](img/1640684176992-56c1324a-faa9-4f79-9538-7b7016102bb2.png)
+
+只能将容器与网络打通，无法将网络与网络打通。
+
+```shell
+# 测试，tomcat01 打通 tomcat-net-02
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat01 ping tomcat-net-01
+PING tomcat-net-01 (192.168.0.2) 56(84) bytes of data.
+64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=1 ttl=64 time=0.068 ms
+64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=2 ttl=64 time=0.063 ms
+```
+
+**结论：假设要跨网络操作，就需要使用 docker network connect 连通。**
+
+
+
+### 9.5 实战：部署Redis集群
+
+方案：分片模式，3台master，3台备用机，当master宕机后，备用机自动顶上。
+
+![img](img/1640684475702-c843ad12-144c-4cdc-9448-09187c264801.png)
+
+```shell
+# 创建 redis 集群网卡
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker network create redis --subnet 172.38.0.0/16
+
+# 通过脚本创建六个redis配置
+for port in $(seq 1 6); \
+do \
+mkdir -p /home/sugar/dev/docker-learn/redis-cluster/node-${port}/conf
+touch /home/sugar/dev/docker-learn/redis-cluster/node-${port}/conf/redis.conf
+cat << EOF >/home/sugar/dev/docker-learn/redis-cluster/node-${port}/conf/redis.conf
+port 6379
+bind 0.0.0.0
+cluster-enabled yes
+cluster-config-file nodes.conf
+cluster-node-timeout 5000
+cluster-announce-ip 172.38.0.1${port}
+cluster-announce-port 6379
+cluster-announce-bus-port 16379
+appendonly yes
+EOF
+done
+
+# 逐个启动redis
+docker run -p 6371:6379 -p 16371:16379 --name redis-1 \
+-v /home/sugar/dev/docker-learn/redis-cluster/node-1/data:/data \
+-v /home/sugar/dev/docker-learn/redis-cluster/node-1/conf/redis.conf:/etc/redis/redis.conf \
+-d --net redis --ip 172.38.0.11 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+
+# 创建 集群
+# 进入某个redis节点，配置集群  docker exec -it redis-1 /bin/sh，默认进入/data目录
+/data # redis-cli --cluster create 172.38.0.11:6379 172.38.0.12:6379 172.38.0.13:6379 172.38.0.1
+4:6379 172.38.0.15:6379 172.38.0.16:6379 --cluster-replicas 1
+>>> Performing hash slots allocation on 6 nodes...
+Master[0] -> Slots 0 - 5460
+Master[1] -> Slots 5461 - 10922
+Master[2] -> Slots 10923 - 16383
+Adding replica 172.38.0.15:6379 to 172.38.0.11:6379
+Adding replica 172.38.0.16:6379 to 172.38.0.12:6379
+Adding replica 172.38.0.14:6379 to 172.38.0.13:6379
+M: f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379
+   slots:[0-5460] (5461 slots) master
+M: d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379
+   slots:[5461-10922] (5462 slots) master
+M: 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379
+   slots:[10923-16383] (5461 slots) master
+S: eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379
+   replicates 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf
+S: 09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379
+   replicates f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032
+S: b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379
+   replicates d82e3c2a745fdc05c7f94eba404a025d79369c94
+Can I set the above configuration? (type 'yes' to accept): yes
+>>> Nodes configuration updated
+>>> Assign a different config epoch to each node
+>>> Sending CLUSTER MEET messages to join the cluster
+Waiting for the cluster to join
+....
+>>> Performing Cluster Check (using node 172.38.0.11:6379)
+M: f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379
+   slots:[0-5460] (5461 slots) master
+   1 additional replica(s)
+M: d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379
+   slots:[5461-10922] (5462 slots) master
+   1 additional replica(s)
+M: 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379
+   slots:[10923-16383] (5461 slots) master
+   1 additional replica(s)
+S: eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379
+   slots: (0 slots) slave
+   replicates 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf
+S: 09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379
+   slots: (0 slots) slave
+   replicates f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032
+S: b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379
+   slots: (0 slots) slave
+   replicates d82e3c2a745fdc05c7f94eba404a025d79369c94
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+```
+
+测试Redis集群高可用
+
+```shell
+# 查看集群信息，注意 -c 才是集群登录，不加-c是单机登录
+/data # redis-cli -c 
+127.0.0.1:6379> cluster info
+cluster_state:ok
+cluster_slots_assigned:16384
+cluster_slots_ok:16384
+cluster_slots_pfail:0
+cluster_slots_fail:0
+cluster_known_nodes:6
+cluster_size:3
+cluster_current_epoch:6
+cluster_my_epoch:1
+cluster_stats_messages_ping_sent:242
+cluster_stats_messages_pong_sent:239
+cluster_stats_messages_sent:481
+cluster_stats_messages_ping_received:234
+cluster_stats_messages_pong_received:242
+cluster_stats_messages_meet_received:5
+cluster_stats_messages_received:481
+127.0.0.1:6379> cluster nodes
+d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379@16379 master - 0 1640686826062 2 connected 5461-10922
+0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379@16379 master - 0 1640686825000 3 connected 10923-16383
+f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379@16379 myself,master - 0 1640686826000 1 connected 0-5460
+eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379@16379 slave 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 0 1640686826000 4 connected
+09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379@16379 slave f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 0 1640686826862 5 connected
+b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379@16379 slave d82e3c2a745fdc05c7f94eba404a025d79369c94 0 1640686825862 6 connected
+
+# 添加key，定向到13这台master
+127.0.0.1:6379> set a b
+-> Redirected to slot [15495] located at 172.38.0.13:6379
+OK
+
+# 为了测试高可用，将13这台redis停掉
+[sugar@iZ749i4volw5sfZ redis-cluster]$ docker stop redis-3
+
+# 再次获取 key
+/data # redis-cli -c
+127.0.0.1:6379> get a
+-> Redirected to slot [15495] located at 172.38.0.14:6379
+"b"
+
+# 可以看到，即使13这台redis被停了，14这台备用redis自动顶上了，证明了集群的高可用性
+
+# 重新查看集群节点信息
+# 可见 13 master fail，master转移到 14
+172.38.0.14:6379> cluster nodes
+b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379@16379 slave d82e3c2a745fdc05c7f94eba404a025d79369c94 0 1640687132344 6 connected
+eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379@16379 myself,master - 0 1640687130000 7 connected 10923-16383
+d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379@16379 master - 0 1640687131000 2 connected 5461-10922
+09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379@16379 slave f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 0 1640687131343 5 connected
+f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379@16379 master - 0 1640687131000 1 connected 0-5460
+0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379@16379 master,fail - 1640687040367 1640687038855 3 connected
+```
+
+### 9.6 SpringBoot微服务打包Docker镜像
+
+1. 构建springboot项目
+2. 打jar包
+3. 编写 dockerfile，将jar包和dockerfile同目录上传到服务器
+
+```dockerfile
+ FROM java:8
+ COPY *.jar /app.jar
+ CMD ["--server.port=8080"]
+ EXPOSE 8080
+ ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
+
+1. 构建镜像
+
+```shell
+[sugar@iZ749i4volw5sfZ idea]$ docker build -t sugar666 .
+```
+
+1. 发布运行
+
+```shell
+# 查看镜像
+[sugar@iZ749i4volw5sfZ idea]$ docker images
+REPOSITORY   TAG                IMAGE ID       CREATED             SIZE
+sugar666     latest             001af1d72b6b   5 seconds ago       661MB
+tomcat_net   1.0                42b5534d3d6c   About an hour ago   706MB
+tomcat_ip    1.0                229b89cf1631   2 hours ago         704MB
+tomcat       latest             fb5657adc892   5 days ago          680MB
+redis        5.0.9-alpine3.11   3661c84ee9d0   20 months ago       29.8MB
+java         8                  d23bdf5b1b1b   4 years ago         643MB
+# 启动容器
+[sugar@iZ749i4volw5sfZ idea]$ docker run -d -P --name sugar-web sugar666
+ed4138e830cb05f6edc7dcec78c7add5f9fb1e8a82b3db822481aaa360f4fe97
+# 查看端口
+[sugar@iZ749i4volw5sfZ idea]$ docker ps
+CONTAINER ID   IMAGE      COMMAND                  CREATED         STATUS         PORTS                     NAMES
+ed4138e830cb   sugar666   "java -jar /app.jar …"   9 seconds ago   Up 8 seconds   0.0.0.0:49165->8080/tcp   sugar-web
+# 调用接口，成功显示
+[sugar@iZ749i4volw5sfZ idea]$ curl localhost:49165/hello
+Hello world.
+```
+
+**以后交付一个镜像即可！**
+
+
+
+**如果有很多很多镜像？？**
+
+
+
+## 十、Docker Compose
+
+### 10.1 简介
+
+传统Docker流程：
+
+DockerFile  build  run 手动操作，单个容器！
+
+微服务。100个微服务！存在依赖关系，一个个启动非常麻烦！
+
+Docker Compose 来轻松高效的管理容器。定义运行多个容器。
+
+官方介绍
+
+**定义、运行多个容器。**
+
+**YAML file 配置文件。**
+
+**single command。 命令有哪些？**
+
+Compose is a tool for defining and running multi-container Docker applications. With Compose, you use a YAML file to configure your application’s services. Then, with a single command, you create and start all the services from your configuration. To learn more about all the features of Compose, see [the list of features](https://docs.docker.com/compose/#features).
+
+**所有的环境都可以使用 Compose。**
+
+Compose works in all environments: production, staging, development, testing, as well as CI workflows. You can learn more about each case in [Common Use Cases](https://docs.docker.com/compose/#common-use-cases).
+
+**三步骤：**
+
+Using Compose is basically a three-step process:
+
+1. Define your app’s environment with a Dockerfile so it can be reproduced anywhere.
+
+- - **Dockerfile保证我们的项目在任何地方可以运行。**
+
+1. Define the services that make up your app in docker-compose.yml so they can be run together in an isolated environment.
+
+- - **service 什么是服务。**
+  - **docker-compose.yml 这个文件怎么写。**
+
+1. Run docker compose up and the [Docker compose command](https://docs.docker.com/compose/cli-command/) starts and runs your entire app. You can alternatively run docker-compose up using the docker-compose binary.
+
+- - **启动项目**
+
+
+
+**作用总结：批量容器编排。**
+
+Compose 是 Docker官方的开源项目，需要安装！
+
+Dockerfile 让程序在任何地方运行。web服务、redis、mysql、nginx...多个容器。
+
+用类似以下的yaml文件，完成打包：
+
+```yaml
+version: "3.9"  # optional since v1.27.0
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    links:
+      - redis
+  redis:
+    image: redis
+volumes:
+  logvolume01: {}
+```
+
+Compose：两个重要的概念。
+
+- 服务service：容器。应用。（web、redis、mysql...）
+- 项目project：一组关联的容器。
+
+
+
+### 10.2 Compose安装
+
+下载地址：https://docs.docker.com/compose/install/
+
+
+
+1. 下载
+
+```shell
+sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# 上面官方地址很慢，下面国内镜像要快
+sudo curl -L https://get.daocloud.io/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
+```
+
+1. 获取执行权限
+
+```shell
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+1. 验证安装成功
+
+![img](img/1641380962271-12818a4d-2d1a-4ab5-a23c-18a84972fd6d.png)
+
+
+
+### 10.3 Docker-Compose功能测试
+
+官方文档地址：https://docs.docker.com/compose/gettingstarted/
+
+测试场景：Python Web，使用Redis做计数器。
+
+##### 3.1 编写Python应用
+
+1. 创建项目文件夹
+
+```shell
+mkdir composetest
+cd composetest
+```
+
+1. 创建 app.py 文件
+
+```python
+import time
+
+import redis
+from flask import Flask
+
+app = Flask(__name__)
+cache = redis.Redis(host='redis', port=6379)
+
+def get_hit_count():
+    retries = 5
+    while True:
+        try:
+            return cache.incr('hits')
+        except redis.exceptions.ConnectionError as exc:
+            if retries == 0:
+                raise exc
+            retries -= 1
+            time.sleep(0.5)
+
+@app.route('/')
+def hello():
+    count = get_hit_count()
+    return 'Hello World! I have been seen {} times.\n'.format(count)
+```
+
+1. 创建 requirements.txt 文件
+
+```shell
+flask
+redis
+```
+
+
+
+##### 3.2 创建 Dockerfile
+
+必须命名为 `Dockerfile`的文件。
+
+```shell
+# syntax=docker/dockerfile:1
+FROM python:3.7-alpine
+WORKDIR /code
+ENV FLASK_APP=app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+RUN apk add --no-cache gcc musl-dev linux-headers
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+EXPOSE 5000
+COPY . .
+CMD ["flask", "run"]
+```
+
+
+
+##### 3.3 在Compose文件中定义服务
+
+`docker-compose.yml` 文件
+
+```yaml
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+  redis:
+    image: "redis:alpine"
+```
+
+定义两个服务：web 和 redis。
+
+web服务：使用从Dockerfile构建的镜像，将容器与本机暴露的5000端口绑定，示例服务将使用Flask Web默认端口5000.
+
+redis服务：redis使用从Docker Hub公开的镜像。
+
+
+
+##### 3.4 使用Compose构建和运行app 
+
+1. 从项目目录，通过 `docker-compose up`命令启动应用
+   Compose拉取Redis镜像，由代码构建镜像，启动定义的服务。为了以防万一，在构建时代码被完全复制到镜像中。
+
+```shell
+[sugar@iZ749i4volw5sfZ composetest]$ docker-compose up
+Building web
+Sending build context to Docker daemon  6.656kB
+Step 1/10 : FROM python:3.7-alpine
+ ---> a1034fd13493
+Step 2/10 : WORKDIR /code
+ ---> Using cache
+ ---> 0b88cb2d3d8a
+Step 3/10 : ENV FLASK_APP=app.py
+ ---> Using cache
+ ---> 8d77274a8b7c
+Step 4/10 : ENV FLASK_RUN_HOST=0.0.0.0
+ ---> Using cache
+ ---> 2290dee335fa
+Step 5/10 : RUN apk add --no-cache gcc musl-dev linux-headers
+ ---> Running in 85123fe029dc
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.15/main/x86_64/APKINDEX.tar.gz
+fetch https://dl-cdn.alpinelinux.org/alpine/v3.15/community/x86_64/APKINDEX.tar.gz
+(1/13) Installing libgcc (10.3.1_git20211027-r0)
+(2/13) Installing libstdc++ (10.3.1_git20211027-r0)
+(3/13) Installing binutils (2.37-r3)
+(4/13) Installing libgomp (10.3.1_git20211027-r0)
+(5/13) Installing libatomic (10.3.1_git20211027-r0)
+(6/13) Installing libgphobos (10.3.1_git20211027-r0)
+(7/13) Installing gmp (6.2.1-r0)
+(8/13) Installing isl22 (0.22-r0)
+(9/13) Installing mpfr4 (4.1.0-r0)
+(10/13) Installing mpc1 (1.2.1-r0)
+(11/13) Installing gcc (10.3.1_git20211027-r0)
+(12/13) Installing linux-headers (5.10.41-r0)
+(13/13) Installing musl-dev (1.2.2-r7)
+Executing busybox-1.34.1-r3.trigger
+OK: 139 MiB in 48 packages
+Removing intermediate container 85123fe029dc
+ ---> f8a3ef932a5a
+Step 6/10 : COPY requirements.txt requirements.txt
+ ---> 7fae14aad5df
+Step 7/10 : RUN pip install -r requirements.txt
+ ---> Running in 6fb5f723430c
+Collecting flask
+  Downloading Flask-2.0.2-py3-none-any.whl (95 kB)
+Collecting redis
+  Downloading redis-4.1.0-py3-none-any.whl (171 kB)
+Collecting click>=7.1.2
+  Downloading click-8.0.3-py3-none-any.whl (97 kB)
+Collecting Werkzeug>=2.0
+  Downloading Werkzeug-2.0.2-py3-none-any.whl (288 kB)
+Collecting itsdangerous>=2.0
+  Downloading itsdangerous-2.0.1-py3-none-any.whl (18 kB)
+Collecting Jinja2>=3.0
+  Downloading Jinja2-3.0.3-py3-none-any.whl (133 kB)
+Collecting packaging>=21.3
+  Downloading packaging-21.3-py3-none-any.whl (40 kB)
+Collecting importlib-metadata>=1.0
+  Downloading importlib_metadata-4.10.0-py3-none-any.whl (17 kB)
+Collecting deprecated>=1.2.3
+  Downloading Deprecated-1.2.13-py2.py3-none-any.whl (9.6 kB)
+Collecting wrapt<2,>=1.10
+  Downloading wrapt-1.13.3-cp37-cp37m-musllinux_1_1_x86_64.whl (78 kB)
+Collecting zipp>=0.5
+  Downloading zipp-3.7.0-py3-none-any.whl (5.3 kB)
+Collecting typing-extensions>=3.6.4
+  Downloading typing_extensions-4.0.1-py3-none-any.whl (22 kB)
+Collecting MarkupSafe>=2.0
+  Downloading MarkupSafe-2.0.1-cp37-cp37m-musllinux_1_1_x86_64.whl (30 kB)
+Collecting pyparsing!=3.0.5,>=2.0.2
+  Downloading pyparsing-3.0.6-py3-none-any.whl (97 kB)
+Installing collected packages: zipp, typing-extensions, wrapt, pyparsing, MarkupSafe, importlib-metadata, Werkzeug, packaging, Jinja2, itsdangerous, deprecated, click, redis, flask
+Successfully installed Jinja2-3.0.3 MarkupSafe-2.0.1 Werkzeug-2.0.2 click-8.0.3 deprecated-1.2.13 flask-2.0.2 importlib-metadata-4.10.0 itsdangerous-2.0.1 packaging-21.3 pyparsing-3.0.6 redis-4.1.0 typing-extensions-4.0.1 wrapt-1.13.3 zipp-3.7.0
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv
+WARNING: You are using pip version 21.2.4; however, version 21.3.1 is available.
+You should consider upgrading via the '/usr/local/bin/python -m pip install --upgrade pip' command.
+Removing intermediate container 6fb5f723430c
+ ---> 23dddc65fd92
+Step 8/10 : EXPOSE 5000
+ ---> Running in ef9576f86f85
+Removing intermediate container ef9576f86f85
+ ---> 6205c2925c4c
+Step 9/10 : COPY . .
+ ---> 3a1781bd2ead
+Step 10/10 : CMD ["flask", "run"]
+ ---> Running in 61f5c8a68de7
+Removing intermediate container 61f5c8a68de7
+ ---> d4444b48f108
+Successfully built d4444b48f108
+Successfully tagged composetest_web:latest
+WARNING: Image for service web was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Pulling redis (redis:alpine)...
+alpine: Pulling from library/redis
+59bf1c3509f3: Already exists
+719adce26c52: Pull complete
+b8f35e378c31: Pull complete
+d034517f789c: Pull complete
+3772d4d76753: Pull complete
+211a7f52febb: Pull complete
+Digest: sha256:4bed291aa5efb9f0d77b76ff7d4ab71eee410962965d052552db1fb80576431d
+Status: Downloaded newer image for redis:alpine
+Creating composetest_web_1   ... done
+Creating composetest_redis_1 ... done
+Attaching to composetest_redis_1, composetest_web_1
+redis_1  | 1:C 05 Jan 2022 13:10:34.927 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis_1  | 1:C 05 Jan 2022 13:10:34.927 # Redis version=6.2.6, bits=64, commit=00000000, modified=0, pid=1, just started
+redis_1  | 1:C 05 Jan 2022 13:10:34.927 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis_1  | 1:M 05 Jan 2022 13:10:34.931 * monotonic clock: POSIX clock_gettime
+redis_1  | 1:M 05 Jan 2022 13:10:34.932 * Running mode=standalone, port=6379.
+redis_1  | 1:M 05 Jan 2022 13:10:34.932 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis_1  | 1:M 05 Jan 2022 13:10:34.932 # Server initialized
+redis_1  | 1:M 05 Jan 2022 13:10:34.932 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+redis_1  | 1:M 05 Jan 2022 13:10:34.932 * Ready to accept connections
+web_1    |  * Serving Flask app 'app.py' (lazy loading)
+web_1    |  * Environment: production
+web_1    |    WARNING: This is a development server. Do not use it in a production deployment.
+web_1    |    Use a production WSGI server instead.
+web_1    |  * Debug mode: off
+web_1    |  * Running on all addresses.
+web_1    |    WARNING: This is a development server. Do not use it in a production deployment.
+web_1    |  * Running on http://172.19.0.3:5000/ (Press CTRL+C to quit)
+```
+
+自动的默认规则：
+
+- 根据yml的service配置，自动拉取镜像，运行容器
+  ![img](img/1641384560375-92a57490-d737-4031-b740-73c965344f74.png)
+- 默认的服务名：文件名_服务器_number（副本数量，在集群状态下，服务有多个运行实例）
+- 项目中的内容默认在同一个网络下，可以通过域名访问（这也是app.py中，redis的host写为redis的原因，其通过域名访问）
+  ![img](img/1641384680725-9d765f51-cd7b-4011-8d5f-d750c9396cca.png)
+  ![img](img/1641384687112-dbc0166c-af29-4f9f-a2f5-686b3d6159c8.png)
+
+
+
+1. 访问  http://ip:5000 地址，看到应用正在执行。
+
+![img](img/1641389014253-f283bae6-4ec2-40c2-a039-1ca00ef92fbf.png)
+
+1. 刷新页面，计数器更新。
+2. 新启终端，通过 `docker image ls`查看本地镜像
+3. 可在项目目录通过 `docker-compose down`命令或终端界面`CTRL+C`关闭app。
+
+
+
+##### 3.5 编辑 Compose 文件，增加数据卷绑定
+
+- `volumes`关键词：将本机项目目录与容器内 /code目录做数据卷绑定，允许动态修改代码，而不用重新构建镜像。
+- `enviroment`关键词：设置 FLASK_ENV 环境变量，告诉 flask run以开发模式启动，随时重载代码。
+
+```yaml
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+    environment:
+      FLASK_ENV: development
+  redis:
+    image: "redis:alpine"
+```
+
+##### 3.6 使用Compose重新构建和运行app
+
+使用 `docker-compose up`命令
+
+```shell
+[sugar@iZ749i4volw5sfZ composetest]$ docker-compose up
+Recreating composetest_web_1 ... done
+Starting composetest_redis_1 ... done
+Attaching to composetest_redis_1, composetest_web_1
+redis_1  | 1:C 05 Jan 2022 13:25:25.273 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis_1  | 1:C 05 Jan 2022 13:25:25.273 # Redis version=6.2.6, bits=64, commit=00000000, modified=0, pid=1, just started
+redis_1  | 1:C 05 Jan 2022 13:25:25.273 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis_1  | 1:M 05 Jan 2022 13:25:25.274 * monotonic clock: POSIX clock_gettime
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 * Running mode=standalone, port=6379.
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 # Server initialized
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 * Loading RDB produced by version 6.2.6
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 * RDB age 77 seconds
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 * RDB memory usage when created 0.79 Mb
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 # Done loading RDB, keys loaded: 1, keys expired: 0.
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 * DB loaded from disk: 0.000 seconds
+redis_1  | 1:M 05 Jan 2022 13:25:25.275 * Ready to accept connections
+web_1    |  * Serving Flask app 'app.py' (lazy loading)
+web_1    |  * Environment: development
+web_1    |  * Debug mode: on
+web_1    |  * Running on all addresses.
+web_1    |    WARNING: This is a development server. Do not use it in a production deployment.
+web_1    |  * Running on http://172.19.0.3:5000/ (Press CTRL+C to quit)
+web_1    |  * Restarting with stat
+web_1    |  * Debugger is active!
+web_1    |  * Debugger PIN: 139-520-616
+```
+
+
+
+##### 3.7 更新app
+
+由于应用代码已通过数据卷做了绑定，所以可以修改代码，并即时看见变化，而不需要重新构建镜像。
+
+修改 `app.py`文件，重新访问页面。
+
+```python
+return 'Hello World! I have been seen {} times.\n'.format(count)
+
+修改为 
+
+return 'Hello World Docker! I have been seen {} times.\n'.format(count)
+```
+
+![img](img/1641389236891-fc12cc97-f79f-491d-9c81-6c9067b10afb.png)
+
+##### 3.8 其他命令
+
+- 后台运行：`docker compose up -d`
+- 查看正在运行的：`docker-compose ps`
+- 启动服务中的一次性命令：`docker-compose run`
+
+- - 查看 web 服务可用的环境变量：`docker-compose run web env`
+
+- 关闭后台运行：`docker-compose stop`
+- 移除整个容器：`docker-compose down --volumes`，--volumes参数移除了redis容器的数据卷
+
+
+
+### 10.4 Docker小结
+
+1. Docker镜像 run ==> 容器
+2. DockerFile 构建镜像（服务打包）
+3. docker-compose 启动项目（编排、多个微服务/环境）
+4. Docker网络
+
+
+
+### 10.5 Compose配置编写规则（YAML规则）
+
+官方文档：https://docs.docker.com/compose/compose-file/compose-file-v3/
+
+```yaml
+# 3层
+ 
+# 第一层：版本 
+version: ‘’  # 与Docker版本对应
+# 第二层：服务
+services: 
+  服务1: web
+  	# 服务配置，docker容器的配置，都可以写在这里
+    images
+    build
+    network
+    ...
+  服务2: redis
+  	...
+  服务3: redis
+  	...
+# 第三层：其他配置，网络/卷、全局规划
+volumes:
+networks:
+configs:
+  
+```
+
+![img](img/1641385654875-74ba21fc-b06c-4dfa-9a31-b7553473f05d.png)
+
+
+
+### 10.6 Compose一键启动wordpress
+
+官方文档：https://docs.docker.com/samples/wordpress/
+
+1. 创建空项目文件夹 `my_wordpress`
+2. 进入文件夹 `cd my_wordpress`
+3. 创建 `docker-compose.yml`
+   独立一个mysql实例，使用数据卷使数据持久化
+
+```yaml
+version: "3.9"
+    
+services:
+  db:
+    image: mysql:5.7
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: somewordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    
+  wordpress:
+    depends_on:
+      - db
+    image: wordpress:latest
+    volumes:
+      - wordpress_data:/var/www/html
+    ports:
+      - "8000:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+volumes:
+  db_data: {}
+  wordpress_data: {}
+```
+
+1. 启动项目 `docker-compose up -d`
+2. 访问地址 ip:8000，查看并安装 wordpress
+3. 关闭项目
+
+1. 1. 移除容器和默认网络，保留数据：`docker-compose down`
+   2. 移除容器、默认网络和数据：`docker-compose down --volumes`
+
+
+
+### 10.7 Compose部署Springboot计数器项目
+
+1. 新建Springboot项目`docker-counter`（编写微服务项目）
+
+新建 `HelloController.java`
+
+```java
+@RestController
+public class HelloContoller {
+
+    @Autowired
+    StringRedisTemplate redisTemplate;
+
+    @GetMapping
+    public String hello() {
+        Long views = redisTemplate.opsForValue().increment("views");
+        return "Hello world, views : " + views;
+    }
+}
+```
+
+修改配置文件 `application.yml`
+
+注意，redis.host为redis，容器内通过域名访问
+
+```yaml
+server:
+  port: 9000
+spring:
+  redis:
+    host: redis
+```
+
+1. 编写 `Dockerfile`（dockerfile构建镜像）
+
+```shell
+FROM java:8
+
+COPY *.jar /app.jar
+
+CMD ["--server.port=9000"]
+
+EXPOSE 9000
+
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+```
+
+1. 编写 `docker-compose.yml`（docker-compose.yml编排项目）
+
+```yaml
+version: "3.9"
+services:
+  sugarapp:
+    build: .
+    image: sugarapp
+    depends_on:
+      - redis
+    ports:
+      - "9000:9000"  
+  redis:
+    image: "library/redis:alpine"
+    
+```
+
+1. 打包jar包，将（jar包，Dockerfile，docker-compose.yml）丢到服务器，启动 `docker-compose up`
+
+```shell
+[sugar@iZ749i4volw5sfZ sugarapp]$ docker-compose up
+Creating network "sugarapp_default" with the default driver
+Building sugarapp
+Sending build context to Docker daemon  27.55MB
+Step 1/5 : FROM java:8
+ ---> d23bdf5b1b1b
+Step 2/5 : COPY *.jar /app.jar
+ ---> 791acc81e0b1
+Step 3/5 : CMD ["--server.port=9000"]
+ ---> Running in e11d4615124f
+Removing intermediate container e11d4615124f
+ ---> 2e51253ddec8
+Step 4/5 : EXPOSE 9000
+ ---> Running in e20a4f2c37e6
+Removing intermediate container e20a4f2c37e6
+ ---> 829e8ca7c7d5
+Step 5/5 : ENTRYPOINT ["java", "-jar", "/app.jar"]
+ ---> Running in 32271fc3a680
+Removing intermediate container 32271fc3a680
+ ---> 6c2ae8d050b6
+Successfully built 6c2ae8d050b6
+Successfully tagged sugarapp:latest
+WARNING: Image for service sugarapp was built because it did not already exist. To rebuild this image you must use `docker-compose build` or `docker-compose up --build`.
+Creating sugarapp_redis_1 ... done
+Creating sugarapp_sugarapp_1 ... done
+Attaching to sugarapp_redis_1, sugarapp_sugarapp_1
+redis_1     | 1:C 05 Jan 2022 13:21:00.405 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+redis_1     | 1:C 05 Jan 2022 13:21:00.405 # Redis version=6.2.6, bits=64, commit=00000000, modified=0, pid=1, just started
+redis_1     | 1:C 05 Jan 2022 13:21:00.405 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+redis_1     | 1:M 05 Jan 2022 13:21:00.406 * monotonic clock: POSIX clock_gettime
+redis_1     | 1:M 05 Jan 2022 13:21:00.407 * Running mode=standalone, port=6379.
+redis_1     | 1:M 05 Jan 2022 13:21:00.407 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+redis_1     | 1:M 05 Jan 2022 13:21:00.407 # Server initialized
+redis_1     | 1:M 05 Jan 2022 13:21:00.408 # WARNING overcommit_memory is set to 0! Background save may fail under low memory condition. To fix this issue add 'vm.overcommit_memory = 1' to /etc/sysctl.conf and then reboot or run the command 'sysctl vm.overcommit_memory=1' for this to take effect.
+redis_1     | 1:M 05 Jan 2022 13:21:00.408 * Ready to accept connections
+sugarapp_1  | 
+sugarapp_1  |   .   ____          _            __ _ _
+sugarapp_1  |  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+sugarapp_1  | ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+sugarapp_1  |  \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+sugarapp_1  |   '  |____| .__|_| |_|_| |_\__, | / / / /
+sugarapp_1  |  =========|_|==============|___/=/_/_/_/
+sugarapp_1  |  :: Spring Boot ::                (v2.6.2)
+sugarapp_1  | 
+sugarapp_1  | 2022-01-05 13:21:04.236  INFO 1 --- [           main] c.e.d.DockerCounterApplication           : Starting DockerCounterApplication v0.0.1-SNAPSHOT using Java 1.8.0_111 on 9a361107742e with PID 1 (/app.jar started by root in /)
+sugarapp_1  | 2022-01-05 13:21:04.243  INFO 1 --- [           main] c.e.d.DockerCounterApplication           : No active profile set, falling back to default profiles: default
+sugarapp_1  | 2022-01-05 13:21:06.496  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode!
+```
+
+1. 访问地址 ip:9000，显示正常
+
+
+
+**项目重新部署打包：**
+
+- `docker-compose up --build`重新部署
+
+
+
+**小结**：
+
+- 未来项目有 docker-compose 文件，可以按照这个规则，启动编排容器。
+- 公司：docker-compose，直接启动。
+- 开源项目：docker-compose，直接启动。
+
+
+
+**总结：**
+
+**工程、服务、容器**
+
+- 工程 Project
+- 服务 Services，通过Dockerfile构建工程镜像
+- 容器 Container，由镜像运行实例
+
+
+
+## 十一、Docker Swarm
+
+
+
+### 11.1 购买服务器
+
+以集群方式部署，需要4台阿里云服务器。
+
+
+
+### 11.2 4台机器安装Docker
+
+
+
+### 11.3 工作模式
+
+![img](img/1641390896494-78fca7be-010a-4547-8fba-08f33245abb0.png)
+
+要在管理节点上操作，至少要有三个管理节点。
+
+![img](img/1641448143301-e9acb195-0a33-4221-bfc8-ec7e2b257951.png)
+
+
+
+### 11.4 配置
+
+![img](img/1641391017583-96770f86-2bd7-40b0-afcd-d396827a29c7.png)
+
+![img](img/1641391020823-b06913dc-4d8e-4105-8f16-d8b9c8e2eb23.png)
+
+![img](img/1641391036853-ba42f938-0675-436b-81f2-77426f6fba69.png)
+
+
+
+```shell
+# 查看本机网络地址 
+ip addr
+
+# 将某一台服务器设为主机
+docker swarm init --advertise-addr ip地址
+```
+
+
+
+将一台机器设为主节点
+
+![img](img/1641435508237-c05f718a-9ab5-48c1-9e05-35b40d357b54.png)
+
+
+
+加入节点：`docker swarm join`
+
+```shell
+# 获取令牌，生成加入命令（执行后，得到现成命令，从节点可直接执行以加入swarm）
+docker swarm join-token manager
+docker swarm join-token worker
+```
+
+w将其他机器设为从节点（加入swarm）
+
+![img](img/1641435654867-e0941324-3725-46c3-92f7-07886f268861.png)
+
+查看节点信息（两主两从结构）
+
+![img](img/1641435827185-9406eba3-5e41-47c5-ad83-ba876d8093cb.png)
+
+
+
+步骤：
+
+1. 生成主节点 `docker swarm init`
+2. 加入（manager、worker）
+
+
+
+### 11.5 Raft一致性协议
+
+双主双从”假设一个节点挂了，其他节点是否可以用？
+
+Raft协议：保证大多数节点存活才可以用，即配置的集群管理节点数量至少大于3台，存活的管理节点至少大于1台！
+
+实验：
+
+1. 将docker1机器停止，宕机！双主，另外一个主节点也不能使用了！
+   将docker1恢复后，Leader变成了docker3，docker1变成了Reachable，不再是Leader。
+
+![img](img/1641436183502-bc046e6b-5bcd-4930-92c1-f07342e249c0.png)
+
+1. 将其他节点离开
+
+![img](img/1641436263338-2d7fb275-a127-4d98-a2bd-c08b3ad4629a.png)
+
+1. worker仅工作，无法使用管理节点命令！
+2. 设置3台机器为管理节点，挂掉其中一个管理节点，集群依然可以使用。挂掉其中两个管理节点，则集群不能使用。
+
+
+
+### 11.6 体验
+
+告别 docker run！
+
+单机：docker-compose up！启动一个项目。
+
+集群：swarm  `docker service`
+
+容器 ==> 服务 ==> 副本！
+
+redis服务 => 10个副本（同时开启10个redis容器）
+
+体验：创建服务、动态扩展服务、动态更新服务。
+
+![img](img/1641436916576-9bfb0ded-3982-4d6a-8b85-97cb8460a31e.png)
+
+灰度发布：金丝雀发布！
+
+```shell
+# 启动nginx服务，docker service和docker run类似，但是启动的是服务
+docker service create -p 8888:80 --name my-nginx nginx
+
+# docker run 容器启动，不具有扩缩容功能。
+# docker service 服务启动，具有扩缩容功能，滚动更新！
+
+docker service ps my-nginx
+docker service ls
+```
+
+![img](img/1641437106549-5ad83494-a6ad-4eab-9cc6-6f2b14fe9ae9.png)
+
+服务有REPLICAS的概念，副本！
+
+此时副本数为 1，在不同机器上查看 `docker ps`，发现该服务跑在docker3上，而不是在启动的docker1熵。
+
+![img](img/1641437134630-404e4d72-fcfe-46d0-b5bf-8d7e417107c4.png)
+
+将 my-nginx 服务的副本数设置为3，将自动创建副本到其他机器上。
+
+无论访问四台机器中的哪一台，都能够访问到服务。
+
+即虽然docker1没有运行服务，但访问docker1的地址，依然能访问到nginx。
+
+四台机器作为一个集群整体，对外提供服务。
+
+![img](img/1641437369155-de1cc7da-cdb3-4cc6-927f-6def02b68770.png)
+
+动态扩缩容，配置10个副本，每台机器上跑多个服务。
+
+![img](img/1641437520169-94dfed8d-07f1-4534-ae43-eb44903a24b5.png)
+
+也可以动态配置为只有1个副本，其他副本就会被remove。
+
+
+
+
+
+也可以通过 `docker service scale`命令实现动态扩缩容，等价于 `docker service update --replicas`
+
+![img](img/1641447726308-06f0a08a-1d7b-449d-a395-b9ef1151cd51.png)
+
+
+
+通过 `docker service rm my-nginx`移除服务。
+
+
+
+### 11.7 概念总结
+
+**swarm**
+
+集群的管理和编排，docker可以初始化一个swarm集群，其他节点可以加入。（Manager和Worker）
+
+**Node**
+
+是一个docker多个节点组成一个网络集群。
+
+**Service**
+
+任务，可以在管理节点或者工作节点来运行，核心！用户访问！
+
+**Task**
+
+容器内的命令，细节任务！
+
+![img](img/1641448068690-479ba508-49a5-4125-b00f-ff75ca974f61.png)
+
+命令 -》 管理 -》 api -》 调度 -》 工作节点（创建Task容器维护创建）
+
+
+
+扩展：网络模式：“PublishMode”：“ingress”
+
+Swarm
+
+Overlay
+
+ingress：特殊的 Overlay 网络，负载均衡的功能！IPVS VIP！
+
+
+
+通过inspect命令可得，虽然docker在4台机器上，实际网络是同一个！ingress网络是一个特殊的Overlay 网络
+
+![img](img/1641448593928-d51ff25f-b27b-4919-88aa-e07e5447d652.png)
+
+
+
+## 12 Docker Stack
+
+单机部署项目：docker-compose
+
+集群部署项目：docker Stack
+
+![img](img/1641448954569-93356897-bc80-461f-938f-5c47d0851e28.png)
+
+```shell
+# 单机
+docker-compose up -d wordpress.yaml
+# 集群
+docker stack deploy wordpress.yaml
+```
+
+![img](img/1641448874611-ad2c5098-aa73-4eb9-99b6-5f4ffaa65fd6.png)
+
+
+
+## 13 Docker Secret
+
+安装！配置密码，证书！
+
+![img](img/1641448946032-5ffdf84f-2714-4ce8-a008-fc50ffd75cf7.png)
+
+
+
+## 14 Docker Config
+
+![img](img/1641448989973-0135df0f-64a6-4b8e-b1da-df9664cea7ce.png)
+
+
+
+
+
+## 15 K8s
+
+云原生时代，Go语言
 
 
 
