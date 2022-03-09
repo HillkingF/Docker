@@ -1861,7 +1861,7 @@ Docker镜像都是只读的，当容器启动时，一个新的可写层被加�
 
 ### 6.4 commit镜像（提交自己的镜像）
 
-命令公式：
+> 命令公式
 
 ```shell
 docker commit 提交容器成为一个新的副本
@@ -1870,39 +1870,87 @@ docker commit 提交容器成为一个新的副本
 docker commit -m="提交的描述信息" -a="作者" 容器id 目标镜像名:[TAG]
 ```
 
-命令测试：
+如果需要保存某个容器当前的状态，就可以通过commit来提交，将此时的容器当做一个新的镜像，以后自己使用。
+
+
+
+> 命令测试
+
+下面实践的步骤：
+
+- 第一步，打开一个窗口启动tomcat容器
+- 第二步，再打开第二个窗口查看tomcat容器目录，发现webapps目录下没有文件（这是官方镜像的问题）
+- 第三步，将webapps.dist目录下的文件拷贝到webapps中
+- 第四步，之后想继续使用webapps中包含文件的镜像，而不是官方镜像，那么将此时的镜像进行提交
 
 ```shell
-# 1、启动一个默认的tomcat
-# 在finalshell中的一个窗口中输入：
+# 第一步：启动一个默认的tomcat
+# 在finalshell中的一个窗口中输入以下命令启动tomcat：
 [root@VM-24-12-centos ~]# docker run -it -p 8080:8080 tomcat
 ...启动了,此处省略一堆英文...
+```
 
+```shell
+# 第二步：重新打开一个窗口，查看tomcat目录。发现这个默认的tomcat 是没有webapps应用的（镜像原因，官方镜像默认webapps下没有文件）
+# 查看运行中的容器
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID IMAGE  COMMAND           CREATED         STATUS        PORTS                                     NAMES
+113b868169cf tomcat "catalina.sh run" 45 seconds ago  Up 45 seconds 0.0.0.0:8080->8080/tcp, :::8080->8080/tcp modest_jones
+# 进入tomcat容器
+[root@VM-24-12-centos ~]# docker exec -it 113b868169cf /bin/bash
+# 进入并查看webapps目录
+root@113b868169cf:/usr/local/tomcat# cd webapps
+root@113b868169cf:/usr/local/tomcat/webapps# ls
+root@113b868169cf:/usr/local/tomcat/webapps# cd ..
+root@113b868169cf:/usr/local/tomcat# ls
+BUILDING.txt     README.md      conf            temp
+CONTRIBUTING.md  RELEASE-NOTES  lib             webapps
+LICENSE          RUNNING.txt    logs            webapps.dist
+NOTICE           bin            native-jni-lib  work
 
-# 2、发现这个默认的tomcat 是没有webapps应用的（镜像原因，官方镜像默认webapps下没有文件）
+# 第三步：将webapps.dist目录下的所有文件复制到webapps目录下
+root@113b868169cf:/usr/local/tomcat# cp -r webapps.dist/* webapps
+root@113b868169cf:/usr/local/tomcat# cd webapps
+root@113b868169cf:/usr/local/tomcat/webapps# ls
+ROOT  docs  examples  host-manager  manager
+root@113b868169cf:/usr/local/tomcat/webapps# 
 
-# 3、自己拷贝了基本文件到webapps
-
-# 4、提交自己的版本为一个镜像。以后使用自己修改过的镜像即可。
-[root@VM-0-17-centos docker-learn]# docker commit -a="sugar" -m="add webapps" f332d94a25ba tomcat02:1.0
-sha256:aa3a0273e4f475774fa9b62544ed96c5c8c6e872e81a1b6da3328f85d8f0f883
-
-# 查看镜像列表，发现tomcat02
-[root@VM-0-17-centos docker-learn]# docker images
-REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
-tomcat02              1.0       aa3a0273e4f4   5 seconds ago   684MB
-tomcat                9.0       76206e3ba4b1   6 days ago      680MB
-tomcat                latest    904a98253fbf   6 days ago      680MB
-redis                 latest    40c68ed3a4d2   7 days ago      113MB
-nginx                 latest    ea335eea17ab   8 days ago      141MB
-centos                latest    5d0da3dc9764   2 months ago    231MB
-portainer/portainer   latest    580c0e4e98b0   8 months ago    79.1MB
-elasticsearch         7.6.2     f29a1ee41030   20 months ago   791MB
+# 第四步：提交镜像
+# 首先退出容器
+root@113b868169cf:/usr/local/tomcat/webapps# exit
+exit
+# 查看运行中的容器，发现tomcat容器还在运行
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID   IMAGE     COMMAND             CREATED          STATUS          PORTS                                       NAMES
+113b868169cf   tomcat    "catalina.sh run"   18 minutes ago   Up 18 minutes   0.0.0.0:8080->8080/tcp, :::8080->8080/tcp   modest_jones
+#【下面命令是镜像提交】
+# -a 发布者名字
+# -m 一些说明
+# tomcat02:1.0  tomcat02是镜像的名字，1.0是版本号
+[root@VM-24-12-centos ~]# docker commit -a="nini" -m="add files to dir:webapps" 113b868169cf tomcat02:1.0
+sha256:47b197b5e3d46bfcf1434cf66a49cd74c8eb3d3bd833bdb9cf61b393782d2f47
+# 查看服务器上的镜像：新增了tomcat02这个镜像
+[root@VM-24-12-centos ~]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED          SIZE
+tomcat02              1.0       47b197b5e3d4   20 seconds ago   684MB
+nginx                 latest    605c77e624dd   2 months ago     141MB
+tomcat                9.0       b8e65a4d736d   2 months ago     680MB
+tomcat                latest    fb5657adc892   2 months ago     680MB
+redis                 latest    7614ae9453d1   2 months ago     113MB
+centos                latest    5d0da3dc9764   5 months ago     231MB
+portainer/portainer   latest    580c0e4e98b0   11 months ago    79.1MB
+elasticsearch         7.6.2     f29a1ee41030   23 months ago    791MB
 ```
 
 如果需要保存当前容器的状态，就可以通过commit来提交，获得一个镜像。
 
 
+
+
+
+
+
+------
 
 ## 七、容器数据卷
 
