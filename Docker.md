@@ -1748,7 +1748,7 @@ Status: Downloaded newer image for portainer/portainer:latest
 
 ### 6.2 Docker镜像加载原理
 
-UnionFS（联合文件系统）
+> UnionFS（联合文件系统）
 
 UnionFS（联合文件系统）：Union文件系统（UnionFS）是一种分层、轻量级并且高性能的文件系统，它支持对文件系统的修改作为一次提交来一层层的叠加，同时，可以将不同目录挂载到同一个虚拟文件系统下（unite serveral directories into a single virtual filesystem）。Union文件系统是 Docker 镜像的基础。镜像可以通过分层来进行集成，基于基础镜像（没有父镜像），可以制作各种具体的应用镜像。
 
@@ -1756,17 +1756,17 @@ UnionFS（联合文件系统）：Union文件系统（UnionFS）是一种分层�
 
 
 
-Docker镜像加载原理
+> Docker镜像加载原理
 
 Docker 的镜像实际上由一层一层的文件系统组成，这样的层级文件系统UnionFS。
 
 
 
-bootfs（boot file system，引导加载器）主要包含bootloader和kernel。bootloader主要是引导加载kernel，Linux刚启动时会加载bootfs文件系统，在Docker镜像的最底层是bootfs。这一层与我们典型的Linux/Unix系统是一样的，包含boot加载器和内核。当boot加载完成之后，整个内核就都在内存中了。此时内存的使用权已由bootfs转交给内核，此时系统也会卸载bootfs。
+**bootfs**（boot file system，引导加载器）主要包含bootloader和kernel。bootloader主要是引导加载kernel，Linux刚启动时会加载bootfs文件系统，在Docker镜像的最底层是bootfs。这一层与我们典型的Linux/Unix系统是一样的，包含boot加载器和内核。当boot加载完成之后，整个内核就都在内存中了。此时内存的使用权已由bootfs转交给内核，此时系统也会卸载bootfs。
 
 
 
-rootfs（root file system），在bootfs之上。包含的就是典型的Linux系统中的/dev、/proc、/bin、/etc等标准目录和文件。rootfs就是各种不同的操作系统发行版，比如Ubuntu、Centos等。
+**rootfs**（root file system），在bootfs之上。包含的就是典型的Linux系统中的/dev、/proc、/bin、/etc等标准目录和文件。rootfs就是各种不同的操作系统发行版，比如Ubuntu、Centos等。
 
 ![img](img/1637814953855-da728af8-046a-49b8-b842-0aff2a515e6c.png)
 
@@ -1780,26 +1780,26 @@ rootfs（root file system），在bootfs之上。包含的就是典型的Linux�
 
 ### 6.3 分层理解
 
-分层的镜像
+> 分层的镜像
 
 下载一个镜像，观察下载的日志输出，可以看到是一层一层的在下载。
 
-![img](img/1637815244334-1de579d1-2330-48da-98c9-68fc9f2a8f8c.png)
+![img](img/%E5%88%86%E5%B1%82%E4%B8%8B%E8%BD%BD%E9%95%9C%E5%83%8F.png)
 
 **问题：为什么Docker镜像要采用这种分层的结构？**
 
 最大的好处，莫过于**资源共享**！比如有多个镜像都是从相同的Base镜像构建而来的，那么宿主机只需在磁盘上保留一份Base镜像，同时内存中也只需要加载一份Base镜像，这样就可以为所有的容器服务了，而且镜像的每一层都可以被共享。
 
-可以通过 docker image inspect 命令查看镜像分层。
+> 通过 docker image inspect 命令查看镜像分层
 
 ```shell
-[root@VM-0-17-centos docker-learn]# docker image inspect redis:latest
+[root@VM-24-12-centos ~]# docker image inspect redis:latest
 [
     {
 				// ...
         "RootFS": {
             "Type": "layers",
-            "Layers": [
+            "Layers": [ 【这里每一层对应这一个安装步骤】
                 "sha256:e1bbcf243d0e7387fbfe5116a485426f90d3ddeb0b1738dca4e3502b6743b325",
                 "sha256:58e6a16139eebebf7f6f0cb15f9cb3c2a4553a062d2cbfd1a782925452ead433",
                 "sha256:503a5c57d9786921c992b7b2216ae58f69dcf433eedb28719ddea3606b42ce26",
@@ -1847,7 +1847,7 @@ Docker 在Windows上仅支持 windowsfilter 一种存储引擎。该引擎基于
 
 ![img](img/1637816041631-dd743a7b-a3f8-4f81-9d6e-539884328068.png)
 
-特点
+> 特点
 
 Docker镜像都是只读的，当容器启动时，一个新的可写层被加载到镜像的顶部！
 
@@ -1855,7 +1855,13 @@ Docker镜像都是只读的，当容器启动时，一个新的可写层被加�
 
 ![img](img/1637816190079-8e399b9b-4d4b-44f8-93e0-2d5d99af46fd.png)
 
+
+
+
+
 ### 6.4 commit镜像（提交自己的镜像）
+
+命令公式：
 
 ```shell
 docker commit 提交容器成为一个新的副本
@@ -1864,10 +1870,14 @@ docker commit 提交容器成为一个新的副本
 docker commit -m="提交的描述信息" -a="作者" 容器id 目标镜像名:[TAG]
 ```
 
-测试
+命令测试：
 
 ```shell
 # 1、启动一个默认的tomcat
+# 在finalshell中的一个窗口中输入：
+[root@VM-24-12-centos ~]# docker run -it -p 8080:8080 tomcat
+...启动了,此处省略一堆英文...
+
 
 # 2、发现这个默认的tomcat 是没有webapps应用的（镜像原因，官方镜像默认webapps下没有文件）
 
