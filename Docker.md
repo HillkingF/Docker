@@ -1493,51 +1493,91 @@ root@a7c27690811f:/etc/nginx#
 
 
 
-### 4.2 Tomcat
+### 4.2 Docker安装Tomcat镜像
+
+dockerhub 官方文档中，即用即删的安装方式：
 
 ```shell
-# 官方使用
-docker run -it --rm tomcat:9.0
+[root@VM-24-12-centos ~]# docker run -it --rm tomcat:9.0
+........
+........
+# --rm  用完就删除，一般用来测试
 
-# 之前启动都是后台，停止了容器之后，容器还是可以查到
---rm  一般用来测试，用完即删除
+# 之前启动都是后台，停止了容器之后，容器还是可以查到，
+# 但是ctrl+c退出Tomcat容器后，查看所有的容器没有找到tomcat的。
+# 说明--rm将用完的tomcat容器删除了
+[root@VM-24-12-centos ~]# docker ps -a
+CONTAINER ID   IMAGE     COMMAND                  CREATED        STATUS                      PORTS     NAMES
+a7c27690811f   nginx     "/docker-entrypoint.…"   3 hours ago    Exited (0) 14 minutes ago             nginx01
+06d8501403aa   centos    "/bin/bash"              21 hours ago   Exited (0) 21 hours ago               suspicious_ritchie
 
-# 下载并启动
-docker pull tomcat:9.0
+```
 
-# 启动运行
-docker run -d -p 3355:8080 --name tomcat01 tomcat
+下载安装镜像的方式：
 
-# 测试访问没有问题，
-[root@VM-0-17-centos docker-learn]# docker exec -it tomcat01 /bin/bash
-root@d3cbd9a5642f:/usr/local/tomcat# ls
-BUILDING.txt     LICENSE  README.md      RUNNING.txt  conf  logs            temp     webapps.dist
-CONTRIBUTING.md  NOTICE   RELEASE-NOTES  bin          lib   native-jni-lib  webapps  work
-root@d3cbd9a5642f:/usr/local/tomcat# ls -l
+```shell
+# 1、下载启动最新版的tomcat镜像
+[root@VM-24-12-centos ~]# docker pull tomcat
+Using default tag: latest
+latest: Pulling from library/tomcat
+0e29546d541c: Already exists 
+9b829c73b52b: Already exists 
+cb5b7ae36172: Already exists 
+6494e4811622: Already exists 
+668f6fcc5fa5: Already exists 
+dc120c3e0290: Already exists 
+8f7c0eebb7b1: Already exists 
+77b694f83996: Already exists 
+0f611256ec3a: Pull complete 
+4f25def12f23: Pull complete 
+Digest: sha256:9dee185c3b161cdfede1f5e35e8b56ebc9de88ed3a79526939701f3537a52324
+Status: Downloaded newer image for tomcat:latest
+docker.io/library/tomcat:latest
+[root@VM-24-12-centos ~]# 
+
+# 2、以后台的方式启动运行一个tomcat容器
+[root@VM-24-12-centos ~]# docker run -d -p 3355:8080 --name tomcat01 tomcat
+dad320eab175ed1976217b2a16a0546147c4e2ff4738e8f0a956930e7c744490
+# -d后台方式， -p 3355:8080宿主机端口与容器内端口映射，用于外部访问， 容器名字是tomcat01
+
+# 3、如果服务器公网可见，使用浏览器测试访问一下
+http://服务器ip:3355/
+应该可以显示tomcat的相关信息
+# 访问没有问题，进入tomcat容器看一下
+[root@VM-24-12-centos ~]# docker exec -it tomcat01 /bin/bash
+root@dad320eab175:/usr/local/tomcat# ls
+BUILDING.txt     README.md      conf            temp
+CONTRIBUTING.md  RELEASE-NOTES  lib             webapps
+LICENSE          RUNNING.txt    logs            webapps.dist
+NOTICE           bin            native-jni-lib  work
+root@dad320eab175:/usr/local/tomcat# ll
+bash: ll: command not found
+root@dad320eab175:/usr/local/tomcat# ls  -l
 total 160
--rw-r--r-- 1 root root 18994 Nov  9 22:12 BUILDING.txt
--rw-r--r-- 1 root root  6210 Nov  9 22:12 CONTRIBUTING.md
--rw-r--r-- 1 root root 60269 Nov  9 22:12 LICENSE
--rw-r--r-- 1 root root  2333 Nov  9 22:12 NOTICE
--rw-r--r-- 1 root root  3372 Nov  9 22:12 README.md
--rw-r--r-- 1 root root  6905 Nov  9 22:12 RELEASE-NOTES
--rw-r--r-- 1 root root 16517 Nov  9 22:12 RUNNING.txt
-drwxr-xr-x 2 root root  4096 Nov 18 14:49 bin
-drwxr-xr-x 1 root root  4096 Nov 25 02:54 conf
-drwxr-xr-x 2 root root  4096 Nov 18 14:49 lib
-drwxrwxrwx 1 root root  4096 Nov 25 02:54 logs
-drwxr-xr-x 2 root root  4096 Nov 18 14:49 native-jni-lib
-drwxrwxrwx 2 root root  4096 Nov 18 14:49 temp
-drwxr-xr-x 2 root root  4096 Nov 18 14:49 webapps
-drwxr-xr-x 7 root root  4096 Nov  9 22:12 webapps.dist
-drwxrwxrwx 2 root root  4096 Nov  9 22:12 work
-root@d3cbd9a5642f:/usr/local/tomcat# cd webapps
-root@d3cbd9a5642f:/usr/local/tomcat/webapps# ls
-
+-rw-r--r-- 1 root root 18994 Dec  2 22:01 BUILDING.txt
+-rw-r--r-- 1 root root  6210 Dec  2 22:01 CONTRIBUTING.md
+-rw-r--r-- 1 root root 60269 Dec  2 22:01 LICENSE
+-rw-r--r-- 1 root root  2333 Dec  2 22:01 NOTICE
+-rw-r--r-- 1 root root  3378 Dec  2 22:01 README.md
+-rw-r--r-- 1 root root  6905 Dec  2 22:01 RELEASE-NOTES
+-rw-r--r-- 1 root root 16517 Dec  2 22:01 RUNNING.txt
+drwxr-xr-x 2 root root  4096 Dec 22 17:07 bin
+drwxr-xr-x 1 root root  4096 Mar  9 06:24 conf
+drwxr-xr-x 2 root root  4096 Dec 22 17:06 lib
+drwxrwxrwx 1 root root  4096 Mar  9 06:24 logs
+drwxr-xr-x 2 root root  4096 Dec 22 17:07 native-jni-lib
+drwxrwxrwx 2 root root  4096 Dec 22 17:06 temp
+drwxr-xr-x 2 root root  4096 Dec 22 17:06 webapps
+drwxr-xr-x 7 root root  4096 Dec  2 22:01 webapps.dist
+drwxrwxrwx 2 root root  4096 Dec  2 22:01 work
+root@dad320eab175:/usr/local/tomcat# cd webapps
+root@dad320eab175:/usr/local/tomcat/webapps# ls
+root@dad320eab175:/usr/local/tomcat/webapps# 
+ 
 # 发现问题：1、linux命令少了 2、没有webapps ==>> 阿里云镜像的原因：默认是最小的镜像，所有不必要的都剔除了，保证最小可运行的环境。
 ```
 
-**问题：每次进入容器修改十分麻烦。应在容器外部提供一个映射路径，webapps，外部放置项目，自动同步到内部即可。**
+**问题：当要部署项目时，每次进入容器修改十分麻烦。应在容器外部提供一个映射路径，webapps，外部放置项目，自动同步到内部即可。**
 
 
 
@@ -1545,20 +1585,35 @@ root@d3cbd9a5642f:/usr/local/tomcat/webapps# ls
 
 - es 暴露的端口很多！
 - es 十分耗内存！
-- es 的数据一般需要防止到安全目录！挂载
+- es 的数据一般需要放置到安全目录！挂载
 
 ```shell
 # --net somenetwork ? 网络配置
 
-# 启动 elasticsearch
-docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:7.6.2
+# 1、启动 elasticsearch
+# hub文档中的启动命令：
+# $ docker run -d --name elasticsearch --net somenetwork -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:tag
+[root@VM-24-12-centos ~]# docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" elasticsearch:7.6.2
+Unable to find image 'elasticsearch:7.6.2' locally
+7.6.2: Pulling from library/elasticsearch
+ab5ef0e58194: Pull complete 
+c4d1ca5c8a25: Pull complete 
+941a3cc8e7b8: Pull complete 
+43ec483d9618: Pull complete 
+c486fd200684: Pull complete 
+1b960df074b2: Pull complete 
+1719d48d6823: Pull complete 
+Digest: sha256:1b09dbd93085a1e7bca34830e77d2981521a7210e11f11eda997add1c12711fa
+Status: Downloaded newer image for elasticsearch:7.6.2
+af9b2399dd2efc49922fcbb5fbe635092c312d89d930f1794e175004006f3f0b
 
-# 测试
-[root@VM-0-17-centos docker-learn]# curl localhost:9200
+
+# 2、测试
+[root@VM-24-12-centos ~]# curl localhost:9200
 {
-  "name" : "5e91e22d082d",
+  "name" : "e0fc22f2eb06",
   "cluster_name" : "docker-cluster",
-  "cluster_uuid" : "l-2zcG0ATHSNgDJdflIIwg",
+  "cluster_uuid" : "VPxDbAjQRy6h_rXL5Cvz6w",
   "version" : {
     "number" : "7.6.2",
     "build_flavor" : "default",
@@ -1573,19 +1628,27 @@ docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=
   "tagline" : "You Know, for Search"
 }
 
-# 查看 docker stats
-CONTAINER ID   NAME            CPU %     MEM USAGE / LIMIT   MEM %     NET I/O          BLOCK I/O        PIDS
-5e91e22d082d   elasticsearch   0.99%     1.273GiB / 3.7GiB   34.40%    1.18kB / 942B    71.4MB / 729kB   44
-d3cbd9a5642f   tomcat01        0.21%     174.4MiB / 3.7GiB   4.60%     28.3kB / 142kB   2.85MB / 0B      34
-# 由于耗内存，所以需要增加内存的限制，修改配置文件
--e 环境配置修改
--e ES_JAVA_OPTS="-Xms64m -Xms512m"
-docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xmx512m" elasticsearch:7.6.2
+
+# 3、查看 docker stats
+# es很耗内存，3.7G占用了1.23G
+[root@VM-24-12-centos ~]# docker stats
+CONTAINER ID   NAME            CPU %     MEM USAGE / LIMIT   MEM %     NET I/O     BLOCK I/O        PIDS
+af9b2399dd2e   elasticsearch   0.32%     1.23GiB / 3.7GiB    33.24%    656B / 0B   49.2kB / 696kB   43
+
+# 由于耗内存，所以需要增加内存的限制，在命令中修改配置文件
+# -e 环境配置修改
+# -e ES_JAVA_OPTS="-Xms64m -Xms512m"
+[root@VM-24-12-centos ~]# docker run -d --name elasticsearch02 -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e ES_JAVA_OPTS="-Xms64m -Xmx512m" elasticsearch:7.6.2
+1410133b851589e379ee974f2cada870fa296dc644f92455187e2790811ed2ce
+
+# 重新查看容器占用的内存: 变成了354.2M
+[root@VM-24-12-centos ~]# docker stas
+CONTAINER ID  NAME            CPU %  MEM USAGE/LIMIT  MEM %  NET I/O   BLOCK I/O  PIDS
+1410133b8515  elasticsearch02 0.18%  354.2MiB/3.7GiB  9.35%  656B / 0B 0B / 696kB 43
+
 ```
 
-使用 Kibana 连接 es。
-
-**问题：如何跨容器实现网络连接？**
+如何使用 Kibana 连接 es。**问题：如何跨容器实现网络连接？**
 
 ![img](img/1637813047000-e126696f-8c3c-40c8-bbfc-8eeed33b39d1.png)
 
@@ -1593,16 +1656,21 @@ docker run -d --name elasticsearch -p 9200:9200 -p 9300:9300 -e "discovery.type=
 
 ## 五、可视化
 
+管理镜像的工具：
+
 - portainer（先用这个）
+
+  ```
+  docker run -d -p 8088:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock --privileged=true portainer/portainer
+  ```
+
 - Rancher（CI/CD再用）
 
 
 
 ### 5.1 portainer
 
-Docker图形化界面管理工具。
-
-提供一个后台面板操作。
+Portainer 是一个Docker图形化界面管理工具，提供后台面板操作。
 
 --restart 自启动
 
@@ -1611,15 +1679,42 @@ Docker图形化界面管理工具。
 --privileged  设置权限
 
 ```shell
-# 下载启动
-docker run -d -p 8088:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock --privileged=true portainer/portainer
+# 1、下载启动
+[root@VM-24-12-centos ~]# docker run -d -p 8088:9000 --restart=always -v /var/run/docker.sock:/var/run/docker.sock --privileged=true portainer/portainer
+Unable to find image 'portainer/portainer:latest' locally
+
+latest: Pulling from portainer/portainer
+94cfa856b2b1: Pull complete 
+49d59ee0881a: Pull complete 
+a2300fd28637: Pull complete 
+Digest: sha256:fb45b43738646048a0a0cc74fcee2865b69efde857e710126084ee5de9be0f3f
+Status: Downloaded newer image for portainer/portainer:latest
+5b6092d804f8ec1de2cdf5654547b2bf791d6826e5519f38dd057f282492a142
+
+
+# 2、内网测试访问
+[root@VM-24-12-centos ~]# curl localhost:8088
+<!DOCTYPE html
+><html lang="en" ng-app="portainer">
+  <head>
+    <meta charset="utf-8" />
+    <title>Portainer</title>
+    <meta name="description" content="" />
+    <meta name="author" content="Portainer.io" />
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
+....太长了，省略....
+
+
+# 3、外网访问测试
+浏览器搜索：http://服务器ip：8088/
 ```
 
-外网地址：ip:8088
 
-账号：admin
 
-密码：admin123
+上面第三步，外网访问成功时，浏览器会显示如下一系列页面：
 
 ![img](img/1637813656808-71932854-7bde-45d5-bdde-bbd6f2ed7ae0.png)
 
@@ -1628,6 +1723,12 @@ docker run -d -p 8088:9000 --restart=always -v /var/run/docker.sock:/var/run/doc
 ![img](img/1637813822956-6473f2d4-cbb5-4b81-a056-a6d62998cb0f.png)
 
 
+
+
+
+
+
+------
 
 ## 六、Docker镜像讲解
 
