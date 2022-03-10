@@ -2042,73 +2042,206 @@ CONTAINER ID   IMAGE     COMMAND       CREATED         STATUS         PORTS     
 
 ### 7.3 实战：安装MySQL（解决数据持久化问题）
 
-MySQL的数据持久化问题。
+> 远程服务器上MySQ容器的数据持久化方法，具体步骤如下：
 
 ```shell
-# 获取镜像
-docker pull mysql:5.7
+# 1、获取mysql5.7版本镜像
+[root@VM-24-12-centos ~]# docker pull mysql:5.7
+5.7: Pulling from library/mysql
+72a69066d2fe: Pull complete 
+93619dbc5b36: Pull complete 
+99da31dd6142: Pull complete 
+626033c43d70: Pull complete 
+37d5d7efb64e: Pull complete 
+ac563158d721: Pull complete 
+d2ba16033dad: Pull complete 
+0ceb82207cd7: Pull complete 
+37f2405cae96: Pull complete 
+e2482e017e53: Pull complete 
+70deed891d42: Pull complete 
+Digest: sha256:f2ad209efe9c67104167fc609cca6973c8422939491c9345270175a300419f94
+Status: Downloaded newer image for mysql:5.7
+docker.io/library/mysql:5.7
+# 查看镜像
+[root@VM-24-12-centos ~]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
+mysql                 5.7       c20987f18b13   2 months ago    448MB
+centos                latest    5d0da3dc9764   5 months ago    231MB
 
-# 运行容器，需要做数据挂载！
+# 2、运行mysql容器并进行容器数据挂载
 # 安装启动MySQL，需要配置密码的，注意！
 -d 后台运行
 -p 端口映射
--v 数据卷挂载
--e 环境配置
+-v 数据卷挂载(可以挂载多个数据，下面命令中先挂载了配置文件然后挂载了数据)
+-e 环境配置（在后面配置了密码）
 --name 容器名字
-docker run -d -p 3310:3306 -v /mnt/docker-learn/mysql/conf:/etc/mysql/conf.d -v /mnt/docker-learn/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql:5.7
+[root@VM-24-12-centos ~]# docker run -d -p 3310:3306 -v /home/mysql/conf:/etc/mysql/conf.d -v /home/mysql/data:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=123456 --name mysql01 mysql:5.7
+005bf613e4ebfae21d81f17a301f489207d60f7f4e31a07a2e383bea504cf296
 
-# 使用本地 Navicat连接
+
+# 3、使用本地 Navicat连接远程服务器
+# 如果服务器端口没有开放那么无法连接成功，需要做以下操作：
+首先在云服务器官网配置安全组来添加端口；
+systemctl start firewalld                    # 打开centos服务器防火墙
+firewall-cmd --query-port=3306/tcp           # 查询3306和3310端口是否打开？如果没打开显示No
+firewall-cmd --add-port=3306/tcp --permanent # 打开3306和3310端口
+firewall-cmd --reload                        # 重载入添加的端口
+firewall-cmd --query-port=3306/tcp           # 重新查看3306和3310端口是否打开？此时显示Yes
+接下来就可成功使用Navicat连接远程服务器进行测试     # 此时可以成功连接（密码是123456）
 ```
 
-![img](img/1637840481205-784cd79b-aad7-45c2-ac3e-6d98de8db77a.png)
+<img src="img/mysql%E6%95%B0%E6%8D%AE%E6%8C%82%E8%BD%BD.png" alt="img" style="zoom:50%;" />
 
 ```shell
-# 在Navicat新建数据库后，看到 /mnt/docker-learn/mysql/data下多了新文件夹
+# 4、先查看服务器挂载目录下的文件:
+# 进入服务器内/home/mysql/data下查看包含的文件：此时还没有test目录
+[root@VM-24-12-centos ~]# cd /home
+[root@VM-24-12-centos home]# ls
+ceshi  lighthouse  mysql  nini.java  test.java
+[root@VM-24-12-centos home]# cd mysql
+[root@VM-24-12-centos mysql]# ls
+conf  data
+[root@VM-24-12-centos mysql]# cd data
+[root@VM-24-12-centos data]# ls
+auto.cnf         client-key.pem  ib_logfile1         private_key.pem  sys
+ca-key.pem       ib_buffer_pool  ibtmp1              public_key.pem
+ca.pem           ibdata1         mysql               server-cert.pem
+client-cert.pem  ib_logfile0     performance_schema  server-key.pem
 
-docker rm -f mysql01
-# 即使停掉容器，删除镜像，数据依然存在。
+# 然后使用Navicat在远程数据库中创建新数据库test，如下图：
 ```
+
+<img src="img/mysql%E6%96%B0%E5%BB%BAtest%E6%95%B0%E6%8D%AE%E5%BA%93.png" alt="img" style="zoom:67%;" />
+
+```shell
+# 然后分别查看服务器上，mysql挂载数据时的宿主机目录 /home/mysql/data 和mysql容器目录/var/lib/mysql，是否出现了test目录？
+# 下面第一个图是宿主机目录：/home/mysql/data
+# 下面第二个图是容器目录：/var/lib/mysql
+
+可以看到两个目录中最后都出现了test数据库目录，说明数据挂载成功！
+```
+
+![img](img/%E5%89%8D%E5%90%8E%E4%B8%A4%E6%AC%A1%E6%95%B0%E6%8D%AE%E5%BA%93%E5%8F%98%E5%8C%96.png)
+
+
+
+![img](img/mysql%E5%AE%B9%E5%99%A8%E5%86%85%E7%9A%84%E5%8F%98%E5%8C%96.png)
+
+
+
+**以上操作流程总结：**
+
+- 首先获取mysql对应版本的镜像
+- 运行mysql容器并进行服务器目录和容器目录的数据挂载
+- 使用本地 Navicat连接远程服务器的挂载端口：3310
+- 使用服务器命令行或本地Navicat工具在服务器中创建数据库
+- 验证是否挂载成功：查看本地和容器对应目录中的文件是否更新
+
+```shell
+# 上面Navicat操作的流程分析：
+# 在Navicat中输入远程服务器的ip，用户密码，先连接到服务器的3310端口
+# 服务器3310端口和mysql容器的3306端口是挂载映射的，
+# 所以Navicat中给服务器创建数据库test就相当于在服务器中使用命令行创建数据库test
+```
+
+
+
+如果删除mysql01容器，其中的数据是否会保留呢？
+
+```shell
+# 删除mysql01容器
+[root@VM-24-12-centos /]# docker rm -f mysql01
+mysql01
+# 查看本地挂载目录 /home/mysql/data 中新建的test数据库是否存在?
+# 发现data目录中最后一个test数据库仍然存在
+[root@VM-24-12-centos /]# cd /home/mysql/data
+[root@VM-24-12-centos data]# ls
+auto.cnf         client-key.pem  ib_logfile1         private_key.pem  sys
+ca-key.pem       ib_buffer_pool  ibtmp1              public_key.pem   test
+ca.pem           ibdata1         mysql               server-cert.pem
+client-cert.pem  ib_logfile0     performance_schema  server-key.pem
+```
+
+**以上结果说明即使删除容器，数据依然存在！**
+
+
 
 
 
 ### 7.4 具名和匿名挂载
 
+具名和匿名挂载类似，都不指定宿主机路径（包含宿主机路径的是指定路径挂载）
+
+> 匿名挂载
+
+-v之后只写容器内路径，不写宿主机路径。会自动生成一个宿主机内的数据存储路径。
+
 ```shell
-# 匿名挂载
 -v 容器内路径
-docker run -d -P --name nginx01 -v /etc/nginx nginx
+-P 随机映射端口  （或者-p 3344:80）
+# 匿名挂载：
+[root@VM-24-12-centos /]# docker run -d -P --name nginx01 -v /ect/nginx nginx
+45e9823ab1d4fb7d1c2eaab6b37450f28fc0fb4363627ea4835847d53446c095
 
-# 查看所有卷的情况
-[root@VM-0-17-centos data]# docker volume ls
-DRIVER    VOLUME NAME
-local     21f248bbbc0fb9f88400c6a29afd21444631fea2fee566d527f0aa020fd750e4
-local     55564b300470429fbbe000490528c3b4abff5badb18542db4bd55aab643aceb0
-
+# 查看所有数据卷的情况：
+# 查询结果中VOLUME NAME都是一串数字，没有名字
 # 这种都是匿名挂载，我们在 -v时只写了容器内的路径，没有写容器外的路径！
-
-# 具名挂载
-# 通过 -v 卷名:容器内路径 指定
-[root@VM-0-17-centos data]# docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx nginx
-a9e2ff7d528a8e19ed10ea307494da1f188116e347d6082c2826c1432da51589
-# 可以看到具名挂载的卷名
-[root@VM-0-17-centos data]# docker volume ls
+[root@VM-24-12-centos /]# docker volume ls
 DRIVER    VOLUME NAME
-local     21f248bbbc0fb9f88400c6a29afd21444631fea2fee566d527f0aa020fd750e4
-local     55564b300470429fbbe000490528c3b4abff5badb18542db4bd55aab643aceb0
-local     juming-nginx
+local     27e34d001891244471395c85d271cdbce7a9645f51008a6253523ea4f0c3d010
+local     38cbe6f70cd745fd5732e2f08b4e07bbaf54862badcd89eddc943f3ac8d2ec5f
+local     b3ce648270d4a4140d06bcb9c98041d9db0b8a9db5cba2af95692dbef10fc6a9local     b642ae113ea02ab01f2cca1405795a7bc417f929cd6d3f9da99acbd87821c427
 ```
 
-![img](img/1637842397591-fd43a829-802a-4a47-ac45-2652335dab40.png)
+> 具名挂载
+
+```shell
+# -v 卷名:容器内路径
+# -P 随机端口映射
+[root@VM-24-12-centos /]# docker run -d -P --name nginx02 -v juming-nginx:/ect/nginx nginx
+5ac08dd77ec5e973952982b70e6d074bf3a827ab7ea6454b38c02be145f06722
+
+# 查看所有的卷，可以看到具名挂载的卷名不是随机数字了而是我们指定的名字：juming-nginx
+[root@VM-24-12-centos /]# docker volume ls
+DRIVER    VOLUME NAME
+local     27e34d001891244471395c85d271cdbce7a9645f51008a6253523ea4f0c3d010
+local     38cbe6f70cd745fd5732e2f08b4e07bbaf54862badcd89eddc943f3ac8d2ec5f
+local     b3ce648270d4a4140d06bcb9c98041d9db0b8a9db5cba2af95692dbef10fc6a9
+local     b642ae113ea02ab01f2cca1405795a7bc417f929cd6d3f9da99acbd87821c427
+local     juming-nginx
+
+# 查看具名挂载的数据卷位置
+[root@VM-24-12-centos /]# docker volume inspect juming-nginx
+[
+    {
+        "CreatedAt": "2022-03-10T16:08:00+08:00",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/juming-nginx/_data",
+        "Name": "juming-nginx",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+```
+
+![img](img/%E5%85%B7%E5%90%8D%E6%8C%82%E8%BD%BD%E4%BD%8D%E7%BD%AE.png)
+
+
+
+> 说明
+
+docker的默认目录是`/var/lib/docker`.
 
 所有的 Docker容器内的卷，没有指定目录的情况下都是在 `/var/lib/docker/volumes/xxx/_data`
 
-通过具名挂载，可以方便的找到我们的一个卷，大多数情况都使用`具名挂载`
+通过具名挂载，可以方便的找到对应的数据卷，大多数情况都推荐使用`具名挂载`
 
 ```shell
-如何确定是具名挂载还是匿名挂载，还是指定路径挂载？
--v 容器内路径  # 匿名挂载
--v 卷名: 容器内路径  # 具名挂载
--v /宿主机路径:容器内路径  # 指定路径挂载
+# 如何确定是具名挂载还是匿名挂载，还是指定路径挂载？
+-v 容器内路径             # 匿名挂载
+-v 卷名: 容器内路径        # 具名挂载
+-v /宿主机路径:容器内路径   # 指定路径挂载
 ```
 
 拓展：
@@ -2125,47 +2258,138 @@ docker run -d -P --name nginx02 -v juming-nginx:/etc/nginx:rw nginx
 # ro：只要看到ro，就说明这个路径只能通过宿主机来操作容器内部是无法操作的！
 ```
 
-### 
+
+
+
+
+
 
 ### 7.5 DockerFile数据卷
 
-DockerFile 就是用来构建 docker 镜像的构造文件！命令脚本！
+DockerFile 就是用来构建 docker 镜像的构造文件！就是一段命令脚本！
 
 通过这个脚本，可以生成镜像，镜像是一层层的，脚本是一个个的命令。
 
+> 使用DockerFile创建自己的镜像
+
 ```shell
-# 创建一个 dockerfile文件，名字可以随机，建议 DockerFile
-# 文件中的内容
+# 1、创建并进入 /home/docker-test-volume 目录
+[root@VM-24-12-centos /home]mkdir docker-test-volume
+[root@VM-24-12-centos /home]cd docker-test-volume
+[root@VM-24-12-centos /docker-test-volume]#
+
+# 2、在这个目录中创建编写DockerFile文件：命名为dockerfile1  （建议命名为 DockerFile）
+[root@VM-24-12-centos /docker-test-volume]# vim dockerfile1
+```
+
+```shell
+#【dockerfile1 文件中的内容】
 # 指令（大写） 参数
-FROM centos
+FROM centos   # 表示这个镜像是基于centos的
 
-VOLUME ["volume01", "volume02"]  # 匿名挂载
+VOLUME ["volume01", "volume02"]  # 这里只写了容器内的目录，说明是匿名挂载
 
-CMD echo "-----end------"
+CMD echo "-----end------"        # 一段结束提示语
 CMD /bin/bash
 # 这里的每个命令，就是镜像的一层
 ```
 
-![img](img/1637844146741-ef6db930-35a8-4a12-8721-787276a1c347.png)
-
 ```shell
-# 启动自己写的容器
-docker run -it 6903c26a0b45
+# 以上dockerfile1文件中的内容编辑完成后，先按esc进入命令模式，然后输入:wq保存并退出
+
+
+# 3、接下来生成镜像：使用build命令
+# -f 表示DockerFile文件（可以写成全路径）
+# -t 目标生成路径
+# 从下面的文字可知，生成过程也是一层一层（一句一句）来的。文件中有几句就有几层（或几步）
+[root@VM-24-12-centos docker-test-volume]# docker build -f dockerfile1 -t nini/centos:1.0 .
+Sending build context to Docker daemon  2.048kB
+Step 1/4 : FROM centos  
+ ---> 5d0da3dc9764
+Step 2/4 : VOLUME ["volume01", "volume02"]
+ ---> Running in d4860376a76c
+Removing intermediate container d4860376a76c
+ ---> 6c000fa96c42
+Step 3/4 : CMD echo "-----end------"
+ ---> Running in 72ef2f64ef13
+Removing intermediate container 72ef2f64ef13
+ ---> b9b466e7f01e
+Step 4/4 : CMD /bin/bash
+ ---> Running in 250a30fd56a8
+Removing intermediate container 250a30fd56a8
+ ---> dd321b01ee56
+Successfully built dd321b01ee56
+Successfully tagged nini/centos:1.0
 ```
 
-![img](img/1637844274707-bab63319-833a-4188-9333-9b2600d5c633.png)
+```shell
+# 4、最后查看我们发布的镜像 nini/centos:1.0
+[root@VM-24-12-centos /]# docker images
+REPOSITORY    TAG       IMAGE ID       CREATED         SIZE
+nini/centos   1.0       dd321b01ee56   5 minutes ago   231MB
+centos        latest    5d0da3dc9764   5 months ago    231MB
 
-这个卷和外部一定有一个同步的目录！
+# 启动自己写的容器:测试发现只能用镜像id dd321b01ee56来启动
+[root@VM-24-12-centos /]# docker run -it dd321b01ee56 /bin/bash
 
-查看卷挂载的路径
+# 查看容器目录：最后面两个"volume01""volume02"是我们在dockerfile中创建的数据卷目录
+[root@ba6f6a7592ab /]# ls -l
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  360 Mar 10 09:19 dev
+drwxr-xr-x   1 root root 4096 Mar 10 09:19 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 137 root root    0 Mar 10 09:19 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Mar 10 09:19 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+drwxr-xr-x   2 root root 4096 Mar 10 09:19 volume01
+drwxr-xr-x   2 root root 4096 Mar 10 09:19 volume02
+```
 
-![img](img/1637844431526-2685a795-45ca-4950-b185-73a5f6439460.png)
+<img src="img/buildvolume.png" alt="img" style="zoom: 150%;" />
 
-测试一下刚才的文件是否同步出去了
+```shell
+# 上面的两个目录和外部一定有一个同步的目录！我们可以查看以下挂载的路径！
 
-![img](img/1637844465194-b7ab54bc-80ff-4417-b8b0-fb7bcd23f773.png)
+# 5、查看匿名挂载的数据卷的位置
+# 在容器中进入挂载目录volume01，然后在里面创建一个txt文件
+[root@b69229da7818 /]# cd volume01
+[root@b69229da7818 volume01]touch container.txt
+[root@b69229da7818 volume01]# ls
+container.txt
+# 然后在另外一个窗口中容器(root@b69229da7818)外查看容器信息：使用inspect命令
+# 找到Mounts标签，里面显示了volume01和volume02两个数据卷的本地位置
+[root@VM-24-12-centos ~]# docker inspect b69229da7818
+    .........
+        "Mounts": [
+        ],
+    .........
+```
 
-可以看到挂载成功！
+![img](img/dockerfile_volume_path.png)
+
+
+
+```shell
+# 测试以下数据挂载是否成功：即txt文件是否成功在本机和容器内同步生成
+[root@VM-24-12-centos _data]# cd /var/lib/docker/volumes/80e9fd36fa756560a8b3daa006cf8123248b5f825d8799dd9cf99e41e9f6d9de/_data
+[root@VM-24-12-centos _data]# ls
+container.txt
+
+
+# 以上结果说明挂载成功了！
+```
 
 
 
@@ -2176,6 +2400,8 @@ docker run -it 6903c26a0b45
 
 
 ### 7.6 数据卷容器
+
+就是让容器和容器之间同步！
 
 两个MySQL同步数据！
 
