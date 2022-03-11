@@ -2660,7 +2660,7 @@ ENV						# 构建的时候设置环境变量
 
 > 创建一个自己的centos
 
-
+任务说明：
 
 ```shell
 # 运行一个官方centos对应的容器，在其中输入 vim、ifconfig等命令发现都没有，
@@ -2685,6 +2685,8 @@ bash: ifconfig: command not found
 
 
 
+操作步骤：
+
 ```shell
 # 1、创建/home/dockerfile/mydockerfile-centos 文件，并在文件中编辑dockerfile指令
 [root@VM-24-12-centos home]# mkdir dockerfile
@@ -2695,7 +2697,7 @@ ceshi  dockerfile  docker-test-volume  lighthouse  mysql
 [root@VM-24-12-centos dockerfile]# vim mydockerfile-centos  【编辑文件】
 [root@VM-24-12-centos dockerfile]# cat mydockerfile-centos  【查看文件内容】
 ########################dockerfile指令########################
-FROM centos   # 此镜像基于centos
+FROM centos:7   # 此镜像基于centos:7 !!!!!!!这里一定要加版本号，因为cenntos8镜像没了会报错 
 MAINTAINER nini<976129707@qq.com>  # 作者
 
 ENV MYPATH /usr/local # ENV配置环境变量  MYPATH配置自己进入的目录
@@ -2713,66 +2715,30 @@ CMD /bin/bash
 
 # 2、通过mydockerfile-centos文件来构建镜像
 [root@VM-24-12-centos dockerfile]# docker build -f mydockerfile-centos -t mycentos:0.1 .
-
-# 参考：卸载重下yum：https://www.jianshu.com/p/139104d7ddfd
-
-
-这里出现了如下错误：
-yum下载vim错误，可能是因为Centos原生yum源的网络问题。
-Error: Failed to download metadata for repo 'appstream': Cannot prepare internal mirrorlist: No URLs in mirrorlist
-The command '/bin/sh -c yum -y install vim' returned a non-zero code: 1
-因此首先使用ping www.baidu.com看看有没有问题，如果没有问题，下面使用国内源替换原生源，推荐阿里云或者腾讯云：
- https://developer.aliyun.com/mirror/centos
-
- 
-[root@VM-24-12-centos dockerfile]# ping www.baidu.com
-PING www.a.shifen.com (110.242.68.4) 56(84) bytes of data.
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=1 ttl=251 time=10.9 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=2 ttl=251 time=10.6 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=3 ttl=251 time=10.7 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=4 ttl=251 time=10.7 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=5 ttl=251 time=10.7 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=6 ttl=251 time=10.7 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=7 ttl=251 time=10.7 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=8 ttl=251 time=10.7 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=9 ttl=251 time=10.6 ms
-64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=10 ttl=251 time=10.7 ms
-^C
---- www.a.shifen.com ping statistics ---
-10 packets transmitted, 10 received, 0% packet loss, time 9013ms
-rtt min/avg/max/mdev = 10.685/10.754/10.904/0.098 ms
-[root@VM-24-12-centos dockerfile]# system stop firewalld.service
--bash: system: command not found
-[root@VM-24-12-centos dockerfile]# systemctl stop firewalld.service
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-[root@VM-0-17-centos docker-test-volume]# docker build -f dockerfile1 -t sugar/centos:1.0 .
 // ....
 Successfully built 3e201d4dfcf1
 Successfully tagged mycentos:0.1
 
 # 3、测试运行
-[root@VM-0-17-centos dockerfile]# docker run -it mycentos:0.1
-# 工作目录变为了 /usr/local
-[root@0ffcc43c66c2 local]# pwd
+# 查看所有镜像：mycentos存在
+[root@VM-24-12-centos /]# docker images
+REPOSITORY    TAG       IMAGE ID       CREATED          SIZE
+mycentos      0.1       2027f5401ef8   23 minutes ago   580MB
+nini/centos   1.0       dd321b01ee56   24 hours ago     231MB
+nginx         latest    605c77e624dd   2 months ago     141MB
+mysql         5.7       c20987f18b13   2 months ago     448MB
+centos        7         eeb6ee3f44bd   5 months ago     204MB
+centos        latest    5d0da3dc9764   5 months ago     231MB
+# 运行mycentos对应的容器
+[root@VM-24-12-centos /]# docker run -it mycentos:0.1
+# 默认工作目录（一进入容器就进入/usr/local ,而不是/）
+[root@a17c6e18e33d local]# pwd
 /usr/local
-# ifconfig命令可用了
-[root@0ffcc43c66c2 local]# ifconfig
+# ifconfig命令成功运行
+[root@a17c6e18e33d local]# ifconfig
 eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
-        inet 172.18.0.5  netmask 255.255.0.0  broadcast 172.18.255.255
-        ether 02:42:ac:12:00:05  txqueuelen 0  (Ethernet)
+        inet 172.17.0.2  netmask 255.255.0.0  broadcast 172.17.255.255
+        ether 02:42:ac:11:00:02  txqueuelen 0  (Ethernet)
         RX packets 8  bytes 656 (656.0 B)
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 0  bytes 0 (0.0 B)
@@ -2785,23 +2751,35 @@ lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
         RX errors 0  dropped 0  overruns 0  frame 0
         TX packets 0  bytes 0 (0.0 B)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
-
-# 4、通过 docker history 查看镜像构建历史
-[root@VM-0-17-centos dockerfile]# docker history mycentos:0.1
-IMAGE          CREATED         CREATED BY                                      SIZE      COMMENT
-3e201d4dfcf1   4 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "/bin…   0B        
-641edfbfbd91   4 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
-4df1f95bb0ec   4 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
-42e158a18f95   4 minutes ago   /bin/sh -c #(nop)  EXPOSE 80                    0B        
-fe827f5bd8a0   4 minutes ago   /bin/sh -c yum -y install net-tools             26.9MB    
-9a37001535fc   4 minutes ago   /bin/sh -c yum -y install vim                   63.9MB    
-dfb3d3861248   4 minutes ago   /bin/sh -c #(nop) WORKDIR /usr/local            0B        
-f4f2026165e4   4 minutes ago   /bin/sh -c #(nop)  ENV MYPATH=/usr/local        0B        
-6aa45f68d085   4 minutes ago   /bin/sh -c #(nop)  MAINTAINER sugar<40685758…   0B        
-5d0da3dc9764   2 months ago    /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B        
-<missing>      2 months ago    /bin/sh -c #(nop)  LABEL org.label-schema.sc…   0B        
-<missing>      2 months ago    /bin/sh -c #(nop) ADD file:805cb5e15fb6e0bb0…   231MB    
+# vim命令成功运行
+[root@a17c6e18e33d local]# vim test
+[root@a17c6e18e33d local]#    
 ```
+
+
+
+拓展：可以通过`docker history`查看某个镜像的构建历史
+
+```shell
+[root@VM-24-12-centos /]# docker history 2027f5401ef8
+IMAGE          CREATED          CREATED BY                                      SIZE      COMMENT
+2027f5401ef8   32 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "/bin…   0B        
+d6a708322cb2   32 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
+db48e28d8c6c   32 minutes ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "echo…   0B        
+42267212aa35   32 minutes ago   /bin/sh -c #(nop)  EXPOSE 80                    0B        
+7534d90f2ee6   32 minutes ago   /bin/sh -c yum -y install net-tools             161MB     
+be64defbbff5   32 minutes ago   /bin/sh -c yum -y install vim                   216MB     
+2611e13861fd   33 minutes ago   /bin/sh -c #(nop) WORKDIR /usr/local            0B        
+caf773145d1c   33 minutes ago   /bin/sh -c #(nop)  ENV MYPATH=/usr/local        0B        
+e66ba3913001   33 minutes ago   /bin/sh -c #(nop)  MAINTAINER nini<976129707…   0B        
+eeb6ee3f44bd   5 months ago     /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B        
+<missing>      5 months ago     /bin/sh -c #(nop)  LABEL org.label-schema.sc…   0B        
+<missing>      5 months ago     /bin/sh -c #(nop) ADD file:b3ebbe8bd304723d4…   204MB 
+```
+
+
+
+
 
 > Bug！！！
 
