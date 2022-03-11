@@ -2546,8 +2546,6 @@ docker01
 
 
 
-
-
 ### 7.7 多个MySQL实现数据共享
 
 ```shell
@@ -2569,6 +2567,10 @@ docker run -d -p 3310:3306 -e MYSQL_ROOT_PASSWORD=123456 --name mysql02 --volume
 一旦持久化了本地，本地的数据是不会被删除的！
 
 
+
+
+
+------
 
 ## 八、DockerFile
 
@@ -2648,31 +2650,114 @@ ENV						# 构建的时候设置环境变量
 
 ### 8.4 实战：Centos镜像
 
-`FROM scratch` Docker Hub中 99% 镜像都是从这个基础镜像过来的，然后配置需要的软件和配置来进行构建的。
+> 引入
 
-![img](img/1637893928140-0e8be7bb-0cfd-4c96-8820-a84a3cc57e1f.png)
+在dockerhub中搜索centos镜像，选择一个版本点进去查看其dockerfile文件指令如下图。
 
-创建一个自己的centos
+`FROM scratch` Docker Hub中 99% 镜像都是从`FROM scratch`这个基础镜像过来的，然后配置需要的软件和配置来进行构建的。
+
+<img src="img/centos_dockerfile.png" alt="img" style="zoom:67%;" />
+
+> 创建一个自己的centos
+
+
 
 ```shell
-# 1、编写 dockerfile 文件
-[root@VM-0-17-centos docker-test-volume]# cat dockerfile-centos
-FROM centos
-MAINTAINER sugar<406857586@qq.com>
+# 运行一个官方centos对应的容器，在其中输入 vim、ifconfig等命令发现都没有，
+# 说明官方centos镜像是压缩的，很多命令都没有
+[root@VM-24-12-centos ~]# docker images
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+nini/centos   1.0       dd321b01ee56   21 hours ago   231MB
+nginx         latest    605c77e624dd   2 months ago   141MB
+mysql         5.7       c20987f18b13   2 months ago   448MB
+centos        latest    5d0da3dc9764   5 months ago   231MB
+[root@VM-24-12-centos ~]# docker run -it centos
+[root@b7cde08b5adf /]# vim
+bash: vim: command not found
+[root@b7cde08b5adf /]# ifconfig
+bash: ifconfig: command not found
+[root@b7cde08b5adf /]# 
+```
 
-ENV MYPATH /usr/local
-WORKDIR $MYPATH
+```shell
+# 现在我们要制作一个自己的镜像，基于centos，使得自己的镜像比官方镜像可以多一些命令
+```
 
-RUN yum -y install vim
-RUN yum -y install net-tools
 
-EXPOSE 80
 
-CMD echo $MYPATH
-CMD echo "---end---"
+```shell
+# 1、创建/home/dockerfile/mydockerfile-centos 文件，并在文件中编辑dockerfile指令
+[root@VM-24-12-centos home]# mkdir dockerfile
+[root@VM-24-12-centos home]# ls
+ceshi  dockerfile  docker-test-volume  lighthouse  mysql
+[root@VM-24-12-centos home]# cd dockerfile
+[root@VM-24-12-centos dockerfile]# ls
+[root@VM-24-12-centos dockerfile]# vim mydockerfile-centos  【编辑文件】
+[root@VM-24-12-centos dockerfile]# cat mydockerfile-centos  【查看文件内容】
+########################dockerfile指令########################
+FROM centos   # 此镜像基于centos
+MAINTAINER nini<976129707@qq.com>  # 作者
+
+ENV MYPATH /usr/local # ENV配置环境变量  MYPATH配置自己进入的目录
+WORKDIR $MYPATH       # 工作目录：设置成MYPATH
+
+RUN yum -y install vim # 安装vim命令
+RUN yum -y install net-tools  #安装net-tools
+
+EXPOSE 80    # 暴露端口
+
+CMD echo $MYPATH  # 输出这个路径
+CMD echo "---end---"  # 数据信息 
 CMD /bin/bash
+########################dockerfile指令########################
 
-# 2、构建镜像
+# 2、通过mydockerfile-centos文件来构建镜像
+[root@VM-24-12-centos dockerfile]# docker build -f mydockerfile-centos -t mycentos:0.1 .
+
+# 参考：卸载重下yum：https://www.jianshu.com/p/139104d7ddfd
+
+
+这里出现了如下错误：
+yum下载vim错误，可能是因为Centos原生yum源的网络问题。
+Error: Failed to download metadata for repo 'appstream': Cannot prepare internal mirrorlist: No URLs in mirrorlist
+The command '/bin/sh -c yum -y install vim' returned a non-zero code: 1
+因此首先使用ping www.baidu.com看看有没有问题，如果没有问题，下面使用国内源替换原生源，推荐阿里云或者腾讯云：
+ https://developer.aliyun.com/mirror/centos
+
+ 
+[root@VM-24-12-centos dockerfile]# ping www.baidu.com
+PING www.a.shifen.com (110.242.68.4) 56(84) bytes of data.
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=1 ttl=251 time=10.9 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=2 ttl=251 time=10.6 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=3 ttl=251 time=10.7 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=4 ttl=251 time=10.7 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=5 ttl=251 time=10.7 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=6 ttl=251 time=10.7 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=7 ttl=251 time=10.7 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=8 ttl=251 time=10.7 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=9 ttl=251 time=10.6 ms
+64 bytes from 110.242.68.4 (110.242.68.4): icmp_seq=10 ttl=251 time=10.7 ms
+^C
+--- www.a.shifen.com ping statistics ---
+10 packets transmitted, 10 received, 0% packet loss, time 9013ms
+rtt min/avg/max/mdev = 10.685/10.754/10.904/0.098 ms
+[root@VM-24-12-centos dockerfile]# system stop firewalld.service
+-bash: system: command not found
+[root@VM-24-12-centos dockerfile]# systemctl stop firewalld.service
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 [root@VM-0-17-centos docker-test-volume]# docker build -f dockerfile1 -t sugar/centos:1.0 .
 // ....
 Successfully built 3e201d4dfcf1
@@ -2717,6 +2802,32 @@ f4f2026165e4   4 minutes ago   /bin/sh -c #(nop)  ENV MYPATH=/usr/local        0
 <missing>      2 months ago    /bin/sh -c #(nop)  LABEL org.label-schema.sc…   0B        
 <missing>      2 months ago    /bin/sh -c #(nop) ADD file:805cb5e15fb6e0bb0…   231MB    
 ```
+
+> Bug！！！
+
+这里记录一个bug以及排查思路：
+
+```shell
+# 问题：
+如上第2步，docker build -f mydockerfile-centos -t mycentos:0.1 .  时，出现了下面的错误：
+Error: Failed to download metadata for repo 'appstream': Cannot prepare internal mirrorlist: No URLs in mirrorlist
+The command '/bin/sh -c yum -y install vim' returned a non-zero code: 1
+
+# 解决：
+自己构建的dockerfile中第一句是 FROM centos，默认回去hub上下载最新版本，但2022年1月后centos8镜像都没了，所以yum会报错。
+因此，修改FROM centos为 FROM centos:7
+重新运行build命令，成功创建镜像。
+
+# 拓展：
+如果不是因为版本的问题，那么可能是源的问题。
+首先ping www.baidu.com 看看是否可以成功ping通，
+然后可能是DNS的问题，
+之后可以关闭防火墙？（存疑）
+然后可以修改yum中的源
+# 修改源、卸载重装yum参考：https://www.jianshu.com/p/139104d7ddfd
+```
+
+
 
 ### 8.5 CMD 和 ENTRYPOINT 区别
 
