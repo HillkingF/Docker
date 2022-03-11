@@ -2401,91 +2401,152 @@ container.txt
 
 ### 7.6 数据卷容器
 
-**该看第25个视频了**
+目的就是让容器和容器之间数据同步！
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-就是让容器和容器之间同步！
-
-两个MySQL同步数据！
+多个MySQL同步数据！
 
 ![img](img/1637844663401-7dabbc3e-9c0e-4bfb-8988-6b7983a1a885.png)
 
+> --volumes-from ： 实现容器间的数据挂载
+
+**验证思路：**
+
+- 依次使用挂载方式创建三个容器，验证其中某个容器更新文件时，别的容器是否会更新
+
+**验证步骤：**
+
+- 创建第一个容器docker01，这个容器是基于nini/centos :1.0镜像的，包含两个卷volume01，volume02
+- 创建第二个容器docker02，使用--volumes-from将02容器挂载到01容器上
+- 在02容器的volume01目录中创建文件，会发现01容器的volume01目录也增加了文件（说明两个容器挂载成功）
+- 创建第三个容器docker03，使用--volumes-from将03容器也挂载到01容器上
+- 在03容器的volume01目录中创建文件，会发现01容器的volume01目录也增加了文件（说明两个容器挂载成功）
+
+**验证结论：**
+
+- 多个容器可以实现容器内的相互挂载
 
 
-启动docker01
 
-![img](img/1637844756869-3a85efc6-3d08-49ce-b6de-ab0ffb272d1c.png)
+下面记录验证详细步骤：
 
-启动docker02，设置volumes-from docker01。
+```shell
+# 创建三个容器
 
-在docker01中，到volume01下创建文件docker01，在docker02中同样可见，容器间挂载成功。
+[root@VM-24-12-centos ~]# docker images
+REPOSITORY    TAG       IMAGE ID       CREATED        SIZE
+nini/centos   1.0       dd321b01ee56   17 hours ago   231MB
+nginx         latest    605c77e624dd   2 months ago   141MB
+mysql         5.7       c20987f18b13   2 months ago   448MB
+centos        latest    5d0da3dc9764   5 months ago   231MB
 
-![img](img/1637844910040-b827a3b4-d43a-4145-bc96-7892c31f3205.png)
+# 创建第一个容器，使用ls -l发现容器中存在两个数据卷 volume01和volume02
+[root@VM-24-12-centos ~]# docker run -it --name docker01 nini/centos:1.0
+[root@45c300456ee7 /]# ls
+bin  etc   lib    lost+found  mnt  proc  run   srv  tmp  var       volume02
+dev  home  lib64  media       opt  root  sbin  sys  usr  volume01
+[root@45c300456ee7 /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  360 Mar 11 01:58 dev
+drwxr-xr-x   1 root root 4096 Mar 11 01:58 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 125 root root    0 Mar 11 01:58 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Mar 10 09:19 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+drwxr-xr-x   2 root root 4096 Mar 11 01:58 volume01  【数据卷1】
+drwxr-xr-x   2 root root 4096 Mar 11 01:58 volume02  【数据卷2】
+```
+
+```shell
+# 创建第二个容器，并将它与第一个容器进行挂载: --volumes-from
+# 发现生成的容器docker02中也有两个数据卷 volume01和volume02
+[root@VM-24-12-centos ~]# docker run -it --name docker02 --volumes-from docker01 nini/centos:1.0
+[root@06dc9f6db37f /]# ls -l
+total 56
+lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
+drwxr-xr-x   5 root root  360 Mar 11 02:04 dev
+drwxr-xr-x   1 root root 4096 Mar 11 02:04 etc
+drwxr-xr-x   2 root root 4096 Nov  3  2020 home
+lrwxrwxrwx   1 root root    7 Nov  3  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Nov  3  2020 lib64 -> usr/lib64
+drwx------   2 root root 4096 Sep 15 14:17 lost+found
+drwxr-xr-x   2 root root 4096 Nov  3  2020 media
+drwxr-xr-x   2 root root 4096 Nov  3  2020 mnt
+drwxr-xr-x   2 root root 4096 Nov  3  2020 opt
+dr-xr-xr-x 125 root root    0 Mar 11 02:04 proc
+dr-xr-x---   2 root root 4096 Sep 15 14:17 root
+drwxr-xr-x  11 root root 4096 Sep 15 14:17 run
+lrwxrwxrwx   1 root root    8 Nov  3  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Nov  3  2020 srv
+dr-xr-xr-x  13 root root    0 Mar 10 09:19 sys
+drwxrwxrwt   7 root root 4096 Sep 15 14:17 tmp
+drwxr-xr-x  12 root root 4096 Sep 15 14:17 usr
+drwxr-xr-x  20 root root 4096 Sep 15 14:17 var
+drwxr-xr-x   2 root root 4096 Mar 11 01:58 volume01  【数据卷1】
+drwxr-xr-x   2 root root 4096 Mar 11 01:58 volume02  【数据卷2】
+```
+
+下面进入docker01容器，并在其中增加一个文件，然后查看docker02容器中是否也会增加这个文件？
+
+```shell
+# 进入 docker01这个容器，在volume01这个目录下创建一个新的文件 docker01
+[root@VM-24-12-centos ~]# docker ps
+CONTAINER ID IMAGE           COMMAND                CREATED       STATUS       PORTS     NAMES
+06dc9f6db37f nini/centos:1.0 "/bin/sh -c /bin/bash" 6 minutes ago Up 6 minutes        docker02
+45c300456ee7 nini/centos:1.0 "/bin/sh -c /bin/bash" 12 minutes ago   Up 12 minutes    docker01
+
+[root@VM-24-12-centos ~]# docker attach 45c300456ee7
+[root@45c300456ee7 /]# cd volume01
+[root@45c300456ee7 volume01]# ls
+[root@45c300456ee7 volume01]# touch docker01
+[root@45c300456ee7 volume01]# ls
+docker01
+[root@45c300456ee7 volume01]# 
+=================================================
+# 进入docker02这个容器，查看volume01中是否也出现了这个文件：出现了，说明两个容器中的数据挂载成功
+[root@06dc9f6db37f /]# cd volume01
+[root@06dc9f6db37f volume01]# ls
+docker01
+[root@06dc9f6db37f volume01]# 
+```
+
+
 
 容器间的挂载类似于Java的继承关系。
 
 ![img](img/1637845010601-c5566b1c-56a2-4ea7-95af-2d528429060e.png)
 
-再运行一个docker03，挂载docker01，文件也能够同步过来。
 
-![img](img/1637845263343-7e850677-2850-4810-a1a3-f3301b3c5b2d.png)
 
-```shell
-# 测试：删除docker01，查看一下docker02和docker03，是否还可以访问这个文件
 
-# 结果：依旧可以访问
-```
+
+> 验证数据持久性
 
 ![img](img/1637845418372-59ec10cf-59fd-4b55-aa43-2245c780689b.png)
+
+**不删除容器，只删除共享数据：**
+
+- 上面三个容器都存在，删除03容器中volume01目录中的docker01文件，发现另外两个容器中volume01目录中的docker01文件也没有了
+
+**删除容器：**
+
+- 删除docker01容器，发现02和03容器中volume01目录里的文件还在，说明持久化了
+
+
+
+
 
 ### 7.7 多个MySQL实现数据共享
 
