@@ -2809,71 +2809,169 @@ The command '/bin/sh -c yum -y install vim' returned a non-zero code: 1
 
 ### 8.5 CMD 和 ENTRYPOINT 区别
 
+> 两者区别
+
 ```shell
 CMD						# 指定这个容器启动的时候要运行的命令，只有最后一个会生效，可被替代
 ENTRYPOINT		# 指定这个容器启动的时候要运行的命令，可以追加命令
 ```
 
+> 命令测试
+
 测试CMD
 
 ```shell
-# 编写 dockerfile 文件
-[root@VM-0-17-centos dockerfile]# cat dockerfile-cmd-test 
-FROM centos
-CMD ["ls", "-a"]
+# 1、编写 dockerfile 文件
+[root@VM-24-12-centos dockerfile]# vim dockerfile-cmd-test
+[root@VM-24-12-centos dockerfile]# cat dockerfile-cmd-test
+FROM centos:7
+CMD ["ls","-a"]    # 展示当前目录的所有结构 
 
-# 构建镜像
-[root@VM-0-17-centos dockerfile]# docker build -f dockerfile-cmd-test -t cmdtest .
+# 2、构建镜像
+# -f 是dockerfile 文件的名称， -t 是新镜像的名字
+[root@VM-24-12-centos dockerfile]# docker build -f dockerfile-cmd-test -t cmdtest .
+Sending build context to Docker daemon  3.584kB
+Step 1/2 : FROM centos:7
+ ---> eeb6ee3f44bd
+Step 2/2 : CMD ["ls","-a"]
+ ---> Running in d776ed43ab9e
+Removing intermediate container d776ed43ab9e
+ ---> 7683bb28f8e3
+Successfully built 7683bb28f8e3     【7683bb28f8e3是容器的id】
+Successfully tagged cmdtest:latest
 
-# 运行，发现 ls -a生效
-[root@VM-0-17-centos dockerfile]# docker run 2217d88957de
+
+# 3、运行刚刚发布的镜像的容器，发现 "ls -a"生效
+[root@VM-24-12-centos dockerfile]# docker run 7683bb28f8e3
 .
 ..
 .dockerenv
+anaconda-post.log
 bin
 dev
 etc
 home
+lib
+lib64
+media
+mnt
+opt
+proc
+root
+run
+sbin
+srv
+sys
+tmp
+usr
+var
+
 
 # 想追加一个命令 -l（ls -al），失败
-[root@VM-0-17-centos dockerfile]# docker run 2217d88957de -l
-docker: Error response from daemon: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "-l": executable file not found in $PATH: unknown.
-ERRO[0000] error waiting for container: context canceled 
+[root@VM-24-12-centos dockerfile]# docker run 7683bb28f8e3 -l
+docker: Error response from daemon: failed to create shim: OCI runtime create failed: container_linux.go:380: starting container process caused: exec: "-l": executable file not found in $PATH: unknown.
+ERRO[0000] error waiting for container: context canceled  
 
-# cmd的清理下， -l 替换了CMD ["ls", "-a"]命令，-l 不是命令，所以报错。
+# cmd的情况下， -l 替换了CMD ["ls", "-a"]命令，-l 不是命令，所以报错。
 # 以下命令可以执行
-[root@VM-0-17-centos dockerfile]# docker run 2217d88957de ls -al
+[root@VM-24-12-centos dockerfile]# docker run 7683bb28f8e3 ls -al
+total 64
+drwxr-xr-x   1 root root  4096 Mar 14 07:02 .
+drwxr-xr-x   1 root root  4096 Mar 14 07:02 ..
+-rwxr-xr-x   1 root root     0 Mar 14 07:02 .dockerenv
+-rw-r--r--   1 root root 12114 Nov 13  2020 anaconda-post.log
+lrwxrwxrwx   1 root root     7 Nov 13  2020 bin -> usr/bin
+drwxr-xr-x   5 root root   340 Mar 14 07:02 dev
+drwxr-xr-x   1 root root  4096 Mar 14 07:02 etc
+drwxr-xr-x   2 root root  4096 Apr 11  2018 home
+lrwxrwxrwx   1 root root     7 Nov 13  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root     9 Nov 13  2020 lib64 -> usr/lib64
+drwxr-xr-x   2 root root  4096 Apr 11  2018 media
+drwxr-xr-x   2 root root  4096 Apr 11  2018 mnt
+drwxr-xr-x   2 root root  4096 Apr 11  2018 opt
+dr-xr-xr-x 126 root root     0 Mar 14 07:02 proc
+dr-xr-x---   2 root root  4096 Nov 13  2020 root
+drwxr-xr-x  11 root root  4096 Nov 13  2020 run
+lrwxrwxrwx   1 root root     8 Nov 13  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root  4096 Apr 11  2018 srv
+dr-xr-xr-x  13 root root     0 Mar 10 09:19 sys
+drwxrwxrwt   7 root root  4096 Nov 13  2020 tmp
+drwxr-xr-x  13 root root  4096 Nov 13  2020 usr
+drwxr-xr-x  18 root root  4096 Nov 13  2020 var
+
 ```
 
 测试ENTRYPOINT
 
 ```shell
 # 编写文件
-[root@VM-0-17-centos dockerfile]# cat dockerfile-cmd-entrypoint 
-FROM centos
-ENTRYPOINT ["ls", "-a"]
+[root@VM-24-12-centos dockerfile]# vim dockerfile-cmd-entrypoint
+[root@VM-24-12-centos dockerfile]# cat dockerfile-cmd-entrypoint
+FROM centos:7
+ENTRYPOINT ["ls","-a"]
 
 # 构建镜像
-[root@VM-0-17-centos dockerfile]# docker build -f dockerfile-cmd-entrypoint -t entrypoint-test .
+[root@VM-24-12-centos dockerfile]# docker build -f dockerfile-cmd-entrypoint -t entrypoint-test .
+Sending build context to Docker daemon  4.608kB
+Step 1/2 : FROM centos:7
+ ---> eeb6ee3f44bd
+Step 2/2 : ENTRYPOINT ["ls","-a"]
+ ---> Running in 797bd5a9047b
+Removing intermediate container 797bd5a9047b
+ ---> 8727d3b8d2b3
+Successfully built 8727d3b8d2b3
+Successfully tagged entrypoint-test:latest
 
 # 运行
-[root@VM-0-17-centos dockerfile]# docker run 18c29b6e837b
+[root@VM-24-12-centos dockerfile]# docker run 8727d3b8d2b3
 .
 ..
 .dockerenv
+anaconda-post.log
 bin
 dev
 etc
+home
+lib
+lib64
+media
+mnt
+opt
+proc
+root
+run
+sbin
+srv
+sys
+tmp
+usr
+var
 
-# 追加命令 -l 生效
-[root@VM-0-17-centos dockerfile]# docker run 18c29b6e837b -l
-total 56
-drwxr-xr-x   1 root root 4096 Nov 26 02:54 .
-drwxr-xr-x   1 root root 4096 Nov 26 02:54 ..
--rwxr-xr-x   1 root root    0 Nov 26 02:54 .dockerenv
-lrwxrwxrwx   1 root root    7 Nov  3  2020 bin -> usr/bin
-drwxr-xr-x   5 root root  340 Nov 26 02:54 dev
-drwxr-xr-x   1 root root 4096 Nov 26 02:54 etc
+# 追加命令 -l 生效, -l命令是直接追加在 dockerfile文件中entrypoint命令之后的
+[root@VM-24-12-centos dockerfile]# docker run 8727d3b8d2b3 -l
+total 64
+drwxr-xr-x   1 root root  4096 Mar 14 07:10 .
+drwxr-xr-x   1 root root  4096 Mar 14 07:10 ..
+-rwxr-xr-x   1 root root     0 Mar 14 07:10 .dockerenv
+-rw-r--r--   1 root root 12114 Nov 13  2020 anaconda-post.log
+lrwxrwxrwx   1 root root     7 Nov 13  2020 bin -> usr/bin
+drwxr-xr-x   5 root root   340 Mar 14 07:10 dev
+drwxr-xr-x   1 root root  4096 Mar 14 07:10 etc
+drwxr-xr-x   2 root root  4096 Apr 11  2018 home
+lrwxrwxrwx   1 root root     7 Nov 13  2020 lib -> usr/lib
+lrwxrwxrwx   1 root root     9 Nov 13  2020 lib64 -> usr/lib64
+drwxr-xr-x   2 root root  4096 Apr 11  2018 media
+drwxr-xr-x   2 root root  4096 Apr 11  2018 mnt
+drwxr-xr-x   2 root root  4096 Apr 11  2018 opt
+dr-xr-xr-x 128 root root     0 Mar 14 07:10 proc
+dr-xr-x---   2 root root  4096 Nov 13  2020 root
+drwxr-xr-x  11 root root  4096 Nov 13  2020 run
+lrwxrwxrwx   1 root root     8 Nov 13  2020 sbin -> usr/sbin
+drwxr-xr-x   2 root root  4096 Apr 11  2018 srv
+dr-xr-xr-x  13 root root     0 Mar 10 09:19 sys
+drwxrwxrwt   7 root root  4096 Nov 13  2020 tmp
+drwxr-xr-x  13 root root  4096 Nov 13  2020 usr
+drwxr-xr-x  18 root root  4096 Nov 13  2020 var
 ```
 
 DockerFile中很多命令十分相似，需要了解区别。
