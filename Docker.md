@@ -2981,93 +2981,191 @@ DockerFile中很多命令十分相似，需要了解区别。
 ### 8.6 实战：Tomcat镜像
 
 1. 准备镜像文件 tomcat压缩包、jdk压缩包
-   ![img](img/1637895765892-b57f05a3-3f4f-44d6-8b2c-e0feab1e6a9c.png)
-2. 编写 dockerfile 文件，官方命令 `Dockerfile`，build 会自动寻找这个文件，就不需要 -f 指定了！
+   
+   ```shell
+   # 【压缩包可以直接从服务器上使用wget命令下载】
+   # 在官网上去寻找需要的tomcat9压缩包和jdk8的压缩包版本
+   # 然后在对应的网页上，使用查看网页源代码的方式获取资源压缩包地址
+   [root@VM-24-12-centos dockerfile]# wget https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.59/bin/apache-tomcat-9.0.59.tar.gz
+   ......
+   [root@VM-24-12-centos dockerfile]# wget https://...省略.../jdk-8u221-linux-x64.tar.gz
+   ......
+   
+   #【压缩包也可以下载到本地，使用终端scp命令上传到服务器】--------推荐这种方法
+   # scp 本地文件路径 username@服务器ip：存储路径
+   scp jdk-8u221-linux-x64.tar.gz root@81.70.104.38:/home/dockerfile
+   ```
+   
+   ```shell
+   # 查看下载结果
+   [root@VM-24-12-centos dockerfile]# ll
+   总用量 11284
+   -rw-r--r-- 1 root root 11543067 2月  22 05:05 apache-tomcat-9.0.59.tar.gz
+   -rw-r--r-- 1 root root     4118 3月  14 15:57 jdk-8u221-linux-x64.tar.gz
+   ```
+   
+   
 
-```shell
-[root@VM-0-17-centos build_tomcat]# cat Dockerfile 
-FROM centos
-MAINTAINER sugar<406857586@qq.com>
+2. 编写 dockerfile 文件.
 
-COPY readme.txt /usr/local/readme.txt
+   最好将dockerfile文件用官方名称 `Dockerfile`命名：因为使用官方名称命名文件时build 命令会自动寻找这个文件，因此在`docker build ... `命令中就不需要 -f 参数特别说明了！
 
-ADD jdk-8u221-linux-x64.tar.gz /usr/local/
-ADD apache-tomcat-9.0.55.tar.gz /usr/local/
+   ```shell
+   [root@VM-24-12-centos dockerfile]# vim Dockerfile
+   [root@VM-24-12-centos dockerfile]# cat Dockerfile 
+   FROM centos:7           【这里不带版本号，可能去下载centos8，但其没有镜像会报错】
+   MAINTAINER nini<976129707@qq.com>     【作者名字】
+   COPY readme.txt /usr/local/readme.txt 【将外部的readme文件复制到容器内/usr/local】
+   
+   ADD jdk-8u221-linux-x64.tar.gz /usr/local/ 【ADD将压缩包放到容器时会自动解压】
+   ADD apache-tomcat-9.0.59.tar.gz /usr/local/
+   
+   RUN yum -y install vim      【在镜像中安装vim命令】
+   RUN yum -y install lsof
+   
+   ENV MYPATH /usr/local       【设置镜像的默认工作目录】
+   WORKDIR $MYPATH
+                               【====下面需要配置tomcat和Java的环境变量====】  
+   ENV JAVA_HOME /usr/local/jdk1.8.0_221              【java环境目录】  
+   ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+   ENV CATALINA_HOME /usr/local/apache-tomcat-9.0.59  【tomcat目录】
+   ENV CATALINA_BASH /usr/local/apache-tomcat-9.0.59
+   ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+   
+   EXPOSE 8080                 【暴露tomcat的8080端口】
+   【下面CMD 命令使得这个tomcat容器一旦运行，tomcat就能启动。】
+   【启动tomcat需要运行startup.sh文件，&&来拼接一些参数】
+   CMD /usr/local/apache-tomcat-9.0.59/bin/startup.sh && tail -F /url/local/apache-tomcat-9.0.59/bin/logs/catalina.out
+   
+   [root@VM-24-12-centos dockerfile]# ll
+   总用量 11288
+   -rw-r--r-- 1 root root 11543067 2月  22 05:05 apache-tomcat-9.0.59.tar.gz
+   -rw-r--r-- 1 root root      652 3月  14 16:29 Dockerfile
+   -rw-r--r-- 1 root root     4118 3月  14 15:57 jdk-8u321-linux-x64.tar.gz
+   -rw-r--r-- 1 root root        0 3月  14 16:06 readme.txt
+   ```
 
-RUN yum -y install vim
+3. 构建镜像
 
-ENV MYPATH /usr/local
-WORKDIR $MYPATH
+   ```shell
+   # build后面不用-f参数，因为Dockerfile文件是官方命名
+   [root@VM-24-12-centos dockerfile]# docker build -t diytomcat .
+   ......
+   Successfully built d47db5771805
+   Successfully tagged diytomcat:latest
+   [root@VM-24-12-centos dockerfile]# docker images
+   REPOSITORY        TAG       IMAGE ID       CREATED              SIZE
+   diytomcat         latest    4d5ce9173b9c   About a minute ago   436MB
+   ...
+   ```
 
-ENV JAVA_HOME /usr/local/jdk1.8.0_221
-ENV CLASSPATH $JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
-ENV CATALINA_HOME /usr/local/apache-tomcat-9.0.55
-ENV CATALINA_BASH /usr/local/apache-tomcat-9.0.55
-ENV PATH $PATH:$JAVA_HOME/bin:$CATALINA_HOME/lib:$CATALINA_HOME/bin
+4. 运行镜像并进行数据挂载
 
-EXPOSE 8080
+   ```shell
+   [root@VM-24-12-centos dockerfile]# docker run -d -p 9090:8080 --name ninitomcat -v /home/nini/build/tomcat/test:/usr/local/apache-tomcat-9.0.59/webapps/test -v /home/nini/build/tomcat/tomcatlogs/:/usr/local/apache-tomcat-9.0.59/logs diytomcat
+   a5b9d91f8604cab905419117475e6424ff2b14127e865102ffcc7e82f51ae7f4
+   ```
 
-CMD /usr/local/apache-tomcat-9.0.55/bin/startup.sh && tail -F /url/local/apache-tomcat-9.0.55/bin/logs/catalina.out
-```
+   进入容器内部：查看tomcat和jdk压缩包是否存在并解压？
 
-1. 构建镜像
+   ```shell
+   [root@VM-24-12-centos dockerfile]# docker exec -it a5b9d91f8604 /bin/bash
+   [root@d671c1a02a99 local]# ls 
+   apache-tomcat-9.0.59  etc    include                     lib    libexec     sbin   src
+   bin                   games  jdk-8u321-linux-x64.tar.gz  lib64  readme.txt  share
+   [root@d671c1a02a99 local]# pwd
+   /usr/local
+   
+   [root@a5b9d91f8604 local]# ll
+   total 52
+   drwxr-xr-x 1 root root 4096 Mar 15 08:23 apache-tomcat-9.0.59
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 bin
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 etc
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 games
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 include
+   drwxr-xr-x 7   10  143 4096 Jul  4  2019 jdk1.8.0_221
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 lib
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 lib64
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 libexec
+   -rw-r--r-- 1 root root    0 Mar 14 08:06 readme.txt
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 sbin
+   drwxr-xr-x 5 root root 4096 Nov 13  2020 share
+   drwxr-xr-x 2 root root 4096 Apr 11  2018 src
+   ```
 
-```shell
-docker build -t diytomcat .
-```
+5. **验证容器内的tomcat是否可以访问？**
 
-1. 运行镜像
+   解释：服务器中tomcat容器正在运行中，如果可以从外部成功访问服务器9090端口（9090端口映射到了容器内的8080端口），就说明tomcat容器中的tomcat启动运行成功；否则从镜像创建到容器启动的各个阶段可能存在问题，需要一步一步排查。
 
-```shell
-docker run -d -p 9090:8080 --name sugartomcat -v /mnt/docker-learn/dockerfile/build_tomcat/test:/usr/local/apache-tomcat-9.0.55/webapps/test -v /mnt/docker-learn/dockerfile/build_tomcat/logs:/usr/local/apache-tomcat-9.0.55/logs diytomcat
-```
+   验证：
 
-1. 访问测试
+   ```shell
+   [root@VM-24-12-centos ~]# curl localhost:9090
+   <!DOCTYPE html>
+   <html lang="en">
+       <head>
+           <meta charset="UTF-8" />
+           <title>Apache Tomcat/9.0.59</title>
+           <link href="favicon.ico" rel="icon" type="image/x-icon" />
+           <link href="tomcat.css" rel="stylesheet" type="text/css" />
+       </head>
+       ...这段html代码是tomcat的网页代码，说明tomcat运行成功...
+   
+   ```
 
-```shell
-# 访问生效
-docker ps
-curl localhost:9191/api?
-```
+   ![img](img/%E5%AE%B9%E5%99%A8tomcat%E9%AA%8C%E8%AF%81.png)
 
-1. 在Tomcat发布项目（由于做了卷挂载，所以可直接在本地编写项目，放到挂载路径下就可以发布了！）
+6. 在Tomcat发布项目（由于做了卷挂载，所以可直接在本地编写项目，放到挂载路径下就可以发布了）
 
-web.xml
+   进入容器启动时的挂载目录test，并编辑一些文件：
 
-```shell
-<?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
-         version="4.0">
+   ```shell
+   # 创建WEB-INF目录
+   [root@VM-24-12-centos tomcat]# pwd
+   /home/nini/build/tomcat/test
+   [root@VM-24-12-centos test]# mkdir WEB-INF
+   [root@VM-24-12-centos test]# cd WEB-INF
+   
+   # 编写web.xml文件
+   [root@VM-24-12-centos WEB-INF]# vim web.xml
+   [root@VM-24-12-centos WEB-INF]# cat web.xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
+            version="4.0">
+   
+   </web-app>
+   
+   # 创建与WEB-INF文件同级的 index.jsp
+   [root@VM-24-12-centos WEB-INF]# cd ..
+   [root@VM-24-12-centos test]# vim index.jsp
+   [root@VM-24-12-centos test]# cat index.jsp
+   <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+   <html>
+   <head>
+       <title>主页</title>
+   </head>
+   <body>
+     Hello World
+     <%
+        out.println("IP:" + request.getRemoteAddr());
+     %>
+   </body>
+   </html>
+   ```
 
-</web-app>
-```
-
-index.jsp
-
-```html
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<html>
-<head>
-    <title>主页</title>
-</head>
-<body>
-  Hello World
-  <%
-     out.println("IP:" + request.getRemoteAddr());
-  %>
-</body>
-</html>
-```
-
-1. 访问 ip:9090/test，可以访问
+7. 访问 服务器ip:9090/test，可以成功访问
 
 
+
+> 小结：
 
 以后的开发步骤：掌握Dockerfile的编写。之后的一切都是使用docker镜像来发布运行！
 
-#### 
+
+
+
 
 ### 8.7 发布镜像到DockerHub
 
