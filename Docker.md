@@ -3167,15 +3167,17 @@ DockerFile中很多命令十分相似，需要了解区别。
 
 
 
+
+
 ### 8.7 发布镜像到DockerHub
 
 1. 地址：https://hub.docker.com
 2. 注册账号，并确定可以登录
 3. 在服务器上提交自己的镜像
 
-```html
+```shell
 # 登录命令
-[root@VM-0-17-centos build_tomcat]# docker login --help
+[root@VM-24-12-centos ~]# docker login --help
 
 Usage:  docker login [OPTIONS] [SERVER]
 
@@ -3187,7 +3189,7 @@ Options:
       --password-stdin    Take the password from stdin
   -u, --username string   Username
 
-[root@VM-0-17-centos build_tomcat]# docker login -u sugarbabyzz
+[root@VM-24-12-centos ~]# docker login -u hillkingnini
 Password: 
 WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
 Configure a credential helper to remove this warning. See
@@ -3196,34 +3198,46 @@ https://docs.docker.com/engine/reference/commandline/login/#credentials-store
 Login Succeeded
 ```
 
-1. 登录完毕后，就可以提交镜像了 docker push
+4. 登录完毕后，就可以提交镜像了 `docker push`
 
-```html
+```shell
 # push自己的镜像到服务器上
-[root@VM-0-17-centos build_tomcat]# docker push diytomcat
+[root@VM-24-12-centos ~]# docker push diytomcat
 Using default tag: latest
 The push refers to repository [docker.io/library/diytomcat]
-e1346aad6f14: Preparing 
-c4d20380c6a8: Preparing 
-cef8323f5b7f: Preparing 
-57d2ad337b34: Preparing 
-74ddd0ec08fa: Preparing 
-denied: requested access to the resource is denied   # 被拒绝，没有带发布者信息
+f7a28437de3e: Preparing 
+b2a8fad9d991: Preparing 
+167c1efe3d7e: Preparing 
+e9b29cd70b70: Preparing 
+6c60ea114f85: Preparing 
+174f56854903: Waiting 
+denied: requested access to the resource is denied  # 被拒绝，没有带发布者信息
 
 # push镜像出现的问题
-[root@VM-0-17-centos build_tomcat]# docker push sugarbabyzz/diytomcat:1.0
-The push refers to repository [docker.io/sugarbabyzz/diytomcat]
-An image does not exist locally with the tag: sugarbabyzz/diytomcat
+[root@VM-24-12-centos ~]# docker push hillkingnini/diytomcat:1.0
+The push refers to repository [docker.io/hillkingnini/diytomcat]
+An image does not exist locally with the tag: hillkingnini/diytomcat
+
+
 
 # 解决：增加tag，注意用户名与/前的用户名一定要一致
-[root@VM-0-17-centos build_tomcat]# docker tag ad611843cdae sugarbabyzz/tomcat:1.0
-[root@VM-0-17-centos build_tomcat]# docker images
-REPOSITORY            TAG       IMAGE ID       CREATED         SIZE
-diytomcat             latest    ad611843cdae   2 hours ago     718MB
-sugarbabyzz/tomcat          1.0       ad611843cdae   2 hours ago     718MB
+[root@VM-24-12-centos ~]# docker tag 4d5ce9173b9c hillkingnini/tomcat:1.0
+[root@VM-24-12-centos ~]# docker images
+REPOSITORY            TAG       IMAGE ID       CREATED        SIZE
+hillkingnini/tomcat   1.0       4d5ce9173b9c   46 hours ago   1GB
+diytomcat             latest    4d5ce9173b9c   46 hours ago   1GB
+
 
 # 再发布
-[root@VM-0-17-centos build_tomcat]# docker push sugarbabyzz/tomcat:1.0
+[root@VM-24-12-centos ~]# docker push hillkingnini/tomcat:1.0
+The push refers to repository [docker.io/hillkingnini/tomcat]
+f7a28437de3e: Preparing 
+b2a8fad9d991: Pushing  27.29MB/215.6MB
+167c1efe3d7e: Pushing  865.3kB/16.02MB
+e9b29cd70b70: Pushing  2.163MB/406.7MB
+6c60ea114f85: Pushing   2.56kB
+174f56854903: Waiting 
+
 ```
 
 
@@ -3233,12 +3247,15 @@ sugarbabyzz/tomcat          1.0       ad611843cdae   2 hours ago     718MB
 1. 登录阿里云
 2. 找到 控制台-容器镜像服务
 3. 创建命名空间
-   ![img](img/1637906618825-ba7dda9d-e4a1-40f3-995a-2682bd9cf32b.png)
+   ![img](img/namespace.png)
+
 4. 创建容器镜像
-   ![img](img/1637906685649-ee57ea22-5506-43df-bb20-3a31c2cfa164.png)
+   ![img](img/myrepo.png)
+
 5. 浏览仓库页面信息
-   ![img](img/1637906754484-404cebff-c9d5-4485-b4b4-6debdede37f7.png)
-   ![img](img/1637906759419-aa2cc71a-6b7a-42d8-831a-32f99f78db37.png)
+   ![img](img/3ip.png)
+   ![img](img/command_myrepo.png)
+
 6. 按步骤操作，将镜像push到阿里云仓库
 
 
