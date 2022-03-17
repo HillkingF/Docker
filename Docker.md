@@ -1654,6 +1654,12 @@ CONTAINER ID  NAME            CPU %  MEM USAGE/LIMIT  MEM %  NET I/O   BLOCK I/O
 
 
 
+
+
+
+
+------
+
 ## 五、可视化
 
 管理镜像的工具：
@@ -3272,81 +3278,207 @@ e9b29cd70b70: Pushing  2.163MB/406.7MB
 
 
 
+------
+
 ## 九、Docker网络
 
 ### 9.1 理解Docker0
 
-测试
+> 准备工作
+
+先删除所有的容器和所有的镜像
+
+```shell
+[root@VM-24-12-centos ~]# docker rm -f $(docker ps -aq)
+a5b9d91f8604
+[root@VM-24-12-centos ~]# docker rmi -f $(docker images -aq)
+...
+```
+
+> 提出问题
+
+用`ip addr`命令查看服务器网络：发现有三个ip地址：
+
+- 本机回环地址
+- 阿里云内网地址
+- docker生成的地址：称作docker0
 
 ![img](img/1640678191927-2a80a720-e2d9-43b0-a029-52845413304e.png)
 
-**Docker是如何处理容器间网络访问的？**
+
+
+**思考：Docker是如何处理容器间的网络访问的呢？**
 
 ![img](img/1640678319827-5c66615b-8424-483a-9cc2-1686617826f4.png)
 
+> 测试验证
 
+（1）运行一个tomcat容器，查看从容器外部是否能ping到容器内部？
 
 ```powershell
-# 创建tomcat容器
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat01 tomcat
+# 1、创建并在后台运行一个tomcat容器
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat01 tomcat
+......
 
-# 查看容器内部的网络地址  ip addr
-# 发现容器启动的时候，会得到一个    eth0@if31:   ip地址，docker分配的！
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat01 ip addr
+# 2、查看容器内部的网络地址  ip addr
+# 发现容器启动的时候，会得到一个  eth0@if15:ip地址。这个ip是docker分配的！
+[root@VM-24-12-centos tomcat]# docker exec -it tomcat01 ip addr
+OCI runtime exec failed: exec failed: container_linux.go:380: starting container process caused: exec: "ip": executable file not found in $PATH: unknown
+# 问题：使用上面的方式执行ip命令报错，这与教程中的不一样
+# 原因：说明我们pull的tomcat是精简版的，没有ip命令
+# 解决：先/bin/bash进入容器，然后使用apt命令安装iprout2。重新查看ip【成功解决】
+# 疑问？apt是ubantu的命令，在centos中可用是为啥
+[root@VM-24-12-centos tomcat]# docker exec -it tomcat01 /bin/bash
+root@166b50638650:/usr/local/tomcat# apt update
+......
+root@166b50638650:/usr/local/tomcat# apt install -y iproute2
+...... 
+root@166b50638650:/usr/local/tomcat# ip addr
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     inet 127.0.0.1/8 scope host lo
        valid_lft forever preferred_lft forever
-30: eth0@if31: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+14: eth0@if15: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
     link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
     inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
        valid_lft forever preferred_lft forever
 
 
-# 思考，linux能否ping通容器内部！
-[sugar@iZ749i4volw5sfZ docker-learn]$ ping 172.17.0.2
-PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
-64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.053 ms
-64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.072 ms
 
-# linux 可以 ping通 docker 容器内部
+# 3、思考，linux能否ping通容器内部！
+# 在容器外ping容器内的ip 172.17.0.2 可以ping通
+[root@VM-24-12-centos ~]# ping 172.17.0.2
+PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.024 ms
+64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.027 ms
+......
+
 
 # 可见，172.17.0.2与 本机的docker0:172.17.0.1网络在同一网段，是可以ping通的
 ```
 
+**原理解释：**
+
+- 每启动一个docker容器，docker就会给docker容器分配一个ip。只要安装了docker，就会有一个网卡 docker0，桥接模式，使用的技术是 evth-pair 技术！
+
+- 再次测试：输入 `ip addr`会发现多了一个地址，与容器内的地址一样。
+
+  ```shell
+  [root@VM-24-12-centos ~]# ip addr
+  1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+      link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+      inet 127.0.0.1/8 scope host lo
+         valid_lft forever preferred_lft forever
+      inet6 ::1/128 scope host 
+         valid_lft forever preferred_lft forever
+  2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+      link/ether 52:54:00:39:bc:14 brd ff:ff:ff:ff:ff:ff
+      inet 10.0.24.12/22 brd 10.0.27.255 scope global eth0
+         valid_lft forever preferred_lft forever
+      inet6 fe80::5054:ff:fe39:bc14/64 scope link 
+         valid_lft forever preferred_lft forever
+  3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+      link/ether 02:42:51:5d:07:1d brd ff:ff:ff:ff:ff:ff
+      inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+         valid_lft forever preferred_lft forever
+      inet6 fe80::42:51ff:fe5d:71d/64 scope link 
+         valid_lft forever preferred_lft forever
+  15: veth7fdf8b0@if14: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+      link/ether 22:35:aa:f7:12:58 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+      inet6 fe80::2035:aaff:fef7:1258/64 scope link 
+         valid_lft forever preferred_lft forever
+  ```
+
+- 启动运行一个新的容器，查看容器内外的网卡
+
+  容器外，`17: veth2e79e97@if16:`是tomcat02的docker0：
+
+  ```shell
+  [root@VM-24-12-centos ~]# docker run -d -P --name tomcat02 tomcat
+  71d405f2695e41333503624bac6f779e062cc08f36013a5e3d26b6311dee1206
+  [root@VM-24-12-centos ~]# ip addr
+  1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+      link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+      inet 127.0.0.1/8 scope host lo
+         valid_lft forever preferred_lft forever
+      inet6 ::1/128 scope host 
+         valid_lft forever preferred_lft forever
+  2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+      link/ether 52:54:00:39:bc:14 brd ff:ff:ff:ff:ff:ff
+      inet 10.0.24.12/22 brd 10.0.27.255 scope global eth0
+         valid_lft forever preferred_lft forever
+      inet6 fe80::5054:ff:fe39:bc14/64 scope link 
+         valid_lft forever preferred_lft forever
+  3: docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+      link/ether 02:42:51:5d:07:1d brd ff:ff:ff:ff:ff:ff
+      inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+         valid_lft forever preferred_lft forever
+      inet6 fe80::42:51ff:fe5d:71d/64 scope link 
+         valid_lft forever preferred_lft forever
+  15: veth7fdf8b0@if14: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+      link/ether 22:35:aa:f7:12:58 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+      inet6 fe80::2035:aaff:fef7:1258/64 scope link 
+         valid_lft forever preferred_lft forever
+  17: veth2e79e97@if16: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker0 state UP group default 
+      link/ether 8e:d9:2d:92:e7:42 brd ff:ff:ff:ff:ff:ff link-netnsid 1
+      inet6 fe80::8cd9:2dff:fe92:e742/64 scope link 
+         valid_lft forever preferred_lft forever
+  
+  ```
+
+  容器内，`16: eth0@if17:`是docker0：
+
+  ```shell
+  root@71d405f2695e:/usr/local/tomcat# ip addr
+  1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+      link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+      inet 127.0.0.1/8 scope host lo
+         valid_lft forever preferred_lft forever
+  16: eth0@if17: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+      link/ether 02:42:ac:11:00:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
+      inet 172.17.0.3/16 brd 172.17.255.255 scope global eth0
+         valid_lft forever preferred_lft forever
+  
+  ```
+
+  **结论：** 
+
+  ```shell
+  # 这些容器带来的网卡，都是一对一对的
+  # evth-pair技术，就是一对的虚拟设备接口，成对出现，一端连着协议，一端彼此相连
+  # 正因为这个特性，通常将 evth-pair 充当一个桥梁，连接各种虚拟网络设备的
+  # OpenStack、Docker容器之间的链接，OVS的链接，都是使用 evth-pair技术
+  ```
+
+  
+
+（2）测试 tomcat01 和 tomcat02 两个容器是否可以相互ping通
+
+- 首先在两个容器中使用`apt update` `apt install iputils-ping`安装ping命令
+
+- 然后使用tomcat01和tomcat02命令互ping，都是可以ping通的
+
+  ```shell
+  [root@VM-24-12-centos ~]# docker exec -it tomcat01 ping 172.17.0.3 
+  PING 172.17.0.3 (172.17.0.3) 56(84) bytes of data.
+  64 bytes from 172.17.0.3: icmp_seq=1 ttl=64 time=0.081 ms
+  64 bytes from 172.17.0.3: icmp_seq=2 ttl=64 time=0.041 ms
+  ...
+  
+  [root@VM-24-12-centos ~]# docker exec -it tomcat02 ping 172.17.0.2
+  PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
+  64 bytes from 172.17.0.2: icmp_seq=1 ttl=64 time=0.064 ms
+  64 bytes from 172.17.0.2: icmp_seq=2 ttl=64 time=0.043 ms
+  
+  ```
+
+- **结论：(1)容器和容器之间是可以互相ping通的；(2)tomcat01 和 tomcat02 是共用同一个路由器（docker0）。(3)所有的容器在不指定网络的情况下，都是通过 docker0 路由的，docker会给容器分配一个默认的可用IP。**
+
+  ![img](img/all_docker0.png)
 
 
-原理
 
-1. 每启动一个docker容器，docker就会给docker容器分配一个ip。只要安装了docker，就会有一个网卡 docker0，桥接模式，使用的技术是 evth-pair 技术！
-   再次测试 ip addr，多了一个地址，与容器内的地址一样。
-   ![img](img/1640679984038-92ad8f17-1b2b-4982-9dc0-8f8cb586903c.png)
-2. 再启动一个容器，就会又多一对网卡
-   ![img](img/1640680062765-30bf2c12-9527-452d-9c06-9d716269410a.png)
-
-```shell
-# 这些容器带来的网卡，都是一对一对的
-# evth-pair技术，就是一对的虚拟设备接口，成对出现，一端连着协议，一端彼此相连
-# 正因为这个特性，通常将 evth-pair 充当一个桥梁，连接各种虚拟网络设备的
-# OpenStack、Docker容器之间的链接，OVS的链接，都是使用 evth-pair技术
-```
-
-1. 测试 tomcat01 和 tomcat02是否可以ping通
-   ![img](img/1640680798495-de0dd549-a48b-4b79-b336-bd5674efe02d.png)
-
-**结论：容器和容器之间是可以互相ping通的。**
-
-
-
-![img](img/1640680988478-ba5beceb-931c-4b7c-8ad7-09f87d33cfb6.png)
-
-结论：tomcat01 和 tomcat02 是共用同一个路由器（docker0）。
-
-所有的容器在不指定网络的情况下，都是通过 docker0 路由的，docker会给容器分配一个默认的可用IP。
-
-
-
-小结
+> 小结
 
 - Docker使用的是Linux的桥接模式，宿主机中是一个Docker容器的网桥 docker0。大约能分配65535个。
 - Docker 中的所有网络接口都是虚拟的。因为虚拟的转发效率高。
@@ -3358,27 +3490,27 @@ PING 172.17.0.2 (172.17.0.2) 56(84) bytes of data.
 
 
 
+
+
 ### 9.2 --link
 
-场景：编写了一个微服务，database url=ip:，项目不重启，数据库ip换掉了，希望可以处理这个问题，通过名字来进行访问容器
-
-==> link
+> 场景：编写了一个微服务，database url=ip:，项目不重启，数据库ip换掉了，希望可以处理这个问题，通过名字来进行访问容器
 
 ```bash
-# 直接ping服务名不通
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat02 ping tomcat01
+# 1、问题：两个容器互ping时，直接使用服务名ping不通
+[root@VM-24-12-centos ~]# docker exec -it tomcat02 ping tomcat01
 ping: tomcat01: Name or service not known
 
-# 如何解决？ --link
 
-# 通过 --link解决ping通问题
+# 2、解决：--link可以将两个容器进行连接，但--link是单向的
+
+
+# 3、验证：运行tomcat03容器，并用--link连接到tomcat02上。此时tomcat03可直接ping tomcat02成功
 [sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat03 --link tomcat02 tomcat_ip:1.0
-
 [sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat03 ping tomcat02
 PING tomcat02 (172.17.0.3) 56(84) bytes of data.
 64 bytes from tomcat02 (172.17.0.3): icmp_seq=1 ttl=64 time=0.101 ms
 64 bytes from tomcat02 (172.17.0.3): icmp_seq=2 ttl=64 time=0.058 ms
-
 # 反向可以ping通吗？不行
 [sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat02 ping tomcat03
 ping: tomcat03: Name or service not known
@@ -3391,21 +3523,23 @@ docker network inspect 容器ID
 
 ![img](img/1640682119912-87d8ad05-0ed6-4396-bf5e-21d7f6cf8ec8.png)
 
-tomcat03在本地配置了tomcat02的地址。
+
+
+查看tomcat03的本地文件，发现tomcat03在本地配置了tomcat02的地址,所以可以直接ping到tomcat02。
 
 ```bash
-# 查看hosts配置，发现原理！
-# --link就是在hosts配置中，增加了一个172.17.0.3 tomcat028的配置。
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat03 cat /etc/hosts
+[root@VM-24-12-centos ~]# docker exec -it tomcat03 cat /etc/hosts   【查看本地文件】
 127.0.0.1       localhost
 ::1     localhost ip6-localhost ip6-loopback
 fe00::0 ip6-localnet
 ff00::0 ip6-mcastprefix
 ff02::1 ip6-allnodes
 ff02::2 ip6-allrouters
-172.17.0.3      tomcat02 f7eeff808d50
-172.17.0.4      dfb24685524e
+172.17.0.3      tomcat02 71d405f2695e   【在本地文件中把tomcat02的地址写死了】
+172.17.0.4      ec5b3a2f668e
 ```
+
+> 小结
 
 目前Docker开发已经不建议使用 --link了。
 
