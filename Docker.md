@@ -3549,61 +3549,130 @@ ff02::2 ip6-allrouters
 
 
 
+
+
 ### 9.3 自定义网络
 
-查看所有的 docker 网络
+查看network命令参数及所有的 docker 网络：
 
-![img](img/1640682531109-50f312d4-a21e-4333-8dbf-8fc6197f6ce9.png)
+```bash
+# 查看network命令参数
+[root@VM-24-12-centos ~]# docker network --help
 
-##### 网络模式
+Usage:  docker network COMMAND
 
-- brige：桥接（默认），在docker上搭桥，0.1和0.2通过docker互联
+Manage networks
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+
+# 查看所有的docker网络
+[root@VM-24-12-centos ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+0a4a5df8f19d   bridge    bridge    local
+29acff7962ab   host      host      local
+213bbc98bdf4   none      null      local
+```
+
+
+
+**网络模式**
+
+- bridge：桥接模式（默认），在docker0.1上搭桥，docker0.2和docker0.3通过docker0.1  互联
 - none：不配置网络
 - host：和宿主机共享网络
 - container：容器内网络连通（用得少，局限性较大）
 
 **docker0特点**
 
-- 默认
+- 默认存在，使用`--net bridge`来显示声明
 - 域名不能访问
 - --link可以打通连接
 
-**测试**
+**测试指定容器的网络模式，或自定义一个网络模式：**
 
 ```shell
-# 直接启动的命令 --net bridge，这个就是我们的docker0
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat01 --net bridge tomcat_net:1.0
+# 使用下面这种命令直接启动容器时，默认会有--net bridge 表示指定docker0
+docker run -d -P --name tomcat01 tomcat
 
-# 我们可以自定义一个网络！
+# 1、可以使用--net显式指定网络模式为bridge
+[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat01 --net bridge tomcat
+
+# 2、可以自定义一个网络！
 # --driver bridge  桥接模式
 # --subnet 192.168.0.0/16  子网范围:192.168.0.2 ~ 192.168.255.255
 # --gateway 192.168.0.1  网关
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker network create --driver bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
-d5fb9a4a2ae701f80d79ffb1046a7ac4eb55ab237d7a0c086abbd394c89f5beb
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker network ls
+[root@VM-24-12-centos ~]# docker network create --driver bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
+67acfc3403dde86f408634a33681416a881a7f33c8ab226a46496f32fb086154
+
+# 查看网络列表
+[root@VM-24-12-centos ~]# docker network ls
 NETWORK ID     NAME      DRIVER    SCOPE
-79b01986d506   bridge    bridge    local
-25f2e1abb552   host      host      local
-d5fb9a4a2ae7   mynet     bridge    local
-a53f52a0a700   none      null      local
+0a4a5df8f19d   bridge    bridge    local
+29acff7962ab   host      host      local
+67acfc3403dd   mynet     bridge    local
+213bbc98bdf4   none      null      local
+
+# 查看我们自己的网络的详细信息
+[root@VM-24-12-centos ~]# docker network inspect mynet
+[
+    {
+        "Name": "mynet",
+        "Id": "67acfc3403dde86f408634a33681416a881a7f33c8ab226a46496f32fb086154",
+        "Created": "2022-03-17T19:58:54.53656439+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "192.168.0.0/16",   #【子网范围】
+                    "Gateway": "192.168.0.1"      #【网关】
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
 ```
 
-![img](img/1640683335686-1de24196-8459-4022-baba-17a8858b6d6f.png)
+**在容器中使用自己创建的网络：**
 
 至此，自己的网络就创建好了，后面的服务可以放在自己的网络中。
 
 ```shell
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat-net-01 --net mynet tomcat_net:1.0
-a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker run -d -P --name tomcat-net-02 --net mynet tomcat_net:1.0
-63a4d6ca7acc597df926ca9f4c2d9517c3712e55090abd51742d2523e26920a3
-# 用mynet新建的两个容器，网络地址都加入到 Containers中。
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker network inspect mynet
+# 1、创建两个使用mynet网络的容器
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat-net-01 --net mynet tomcat
+5ef3f987bcfa33474eeefcc0407165497c07e07c5bfcd64fefe5f0be326a4e72
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat-net-02 --net mynet tomcat
+520806ed718f1f3e52f15732182f0748585254a12d3d1d8d71ad80bc66895141
+
+# 2、查看mynet网络详细信息，发现以上两个容器的网络地址都加入到 Containers中了。
+[root@VM-24-12-centos ~]# docker network inspect mynet
 [
     {
         "Name": "mynet",
-        "Id": "d5fb9a4a2ae701f80d79ffb1046a7ac4eb55ab237d7a0c086abbd394c89f5beb",
-        "Created": "2021-12-28T17:19:59.608285274+08:00",
+        "Id": "67acfc3403dde86f408634a33681416a881a7f33c8ab226a46496f32fb086154",
+        "Created": "2022-03-17T19:58:54.53656439+08:00",
         "Scope": "local",
         "Driver": "bridge",
         "EnableIPv6": false,
@@ -3624,17 +3693,17 @@ a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a
             "Network": ""
         },
         "ConfigOnly": false,
-        "Containers": {
-            "63a4d6ca7acc597df926ca9f4c2d9517c3712e55090abd51742d2523e26920a3": {
+        "Containers": {   #【----------下面是两个容器的地址----------】
+            "520806ed718f1f3e52f15732182f0748585254a12d3d1d8d71ad80bc66895141": {
                 "Name": "tomcat-net-02",
-                "EndpointID": "ccf1ef6dd04d7ba743f2e73218c0d08a5ee5cefd33ee320da83bc828c18d4a47",
+                "EndpointID": "ef14c68185d627c1bcd9dc94f40905dd8f30fba4d7ff0abe2202d256dfdf4f1c",
                 "MacAddress": "02:42:c0:a8:00:03",
                 "IPv4Address": "192.168.0.3/16",
                 "IPv6Address": ""
             },
-            "a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a": {
+            "5ef3f987bcfa33474eeefcc0407165497c07e07c5bfcd64fefe5f0be326a4e72": {
                 "Name": "tomcat-net-01",
-                "EndpointID": "5d07a53c9261a2ae006a77189a38ac1f411762dc7f1bd50cb8f3d65214246db9",
+                "EndpointID": "b27b6b87b95495d2ac0fa740c2bd4fb954445cf82191be209ea96075b304e794",
                 "MacAddress": "02:42:c0:a8:00:02",
                 "IPv4Address": "192.168.0.2/16",
                 "IPv6Address": ""
@@ -3644,9 +3713,10 @@ a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a
         "Labels": {}
     }
 ]
+[root@VM-24-12-centos ~]# 
+           
 
-# ping测试
-# 现在不使用 --link，也可以ping通容器名
+# 3、ping测试。现在不使用 --link，也可以ping通容器名
 [sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat-net-01 ping 192.168.0.3
 PING 192.168.0.3 (192.168.0.3) 56(84) bytes of data.
 64 bytes from 192.168.0.3: icmp_seq=1 ttl=64 time=0.062 ms
@@ -3670,96 +3740,144 @@ PING tomcat-net-02 (192.168.0.3) 56(84) bytes of data.
 
 
 
+
+
 ### 9.4 网络联通
 
-对于不同网段的容器，是无法联通的。
+> 测试准备工作
+
+- 先创建四个容器
+- 由于以上四个容器基于tomcat镜像，缺少ping命令，所以先用apt在四个容器中安装pin
 
 ```shell
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat01 ping tomcat-net-01
-ping: tomcat-net-01: Name or service not known
+# 创建第1个容器并安装ping命令：网络模式为mynet
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat-net-01 --net mynet tomcat
+[root@VM-24-12-centos ~]# docker exec -it tomcat-net-01 /bin/bash
+root@5ef3f987bcfa:/usr/local/tomcat# apt update
+......
+root@5ef3f987bcfa:/usr/local/tomcat# apt install iputils-ping
+......
+
+# 创建第2个容器并安装ping命令：网络模式为mynet
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat-net-02 --net mynet tomcat
+[root@VM-24-12-centos ~]# docker exec -it tomcat-net-02 /bin/bash
+root@520806ed718f:/usr/local/tomcat# apt update
+......
+root@520806ed718f:/usr/local/tomcat# apt install iputils-ping
+......
+
+# 创建第3个容器并安装ping命令：网络模式为默认的桥接模式
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat01 tomcat
+8773a1c04f644a275b2d7295acbe6425438765dccb981a96f2944fac00e6558b
+[root@VM-24-12-centos ~]# docker exec -it tomcat01 /bin/bash
+root@8773a1c04f64:/usr/local/tomcat# apt update
+......
+root@8773a1c04f64:/usr/local/tomcat# apt install iputils-ping
+......
+
+# 创建第4个容器并安装ping命令：网络模式为默认的桥接模式
+[root@VM-24-12-centos ~]# docker run -d -P --name tomcat02 tomcat
+eb133dba413cd2849335136772e08ba2b7720ab39bbda7f8b1e8aee96a7658d5
+[root@VM-24-12-centos ~]# docker exec -it tomcat02 /bin/bash
+root@eb133dba413c:/usr/local/tomcat# apt update
+......
+root@eb133dba413c:/usr/local/tomcat# apt install iputils-ping
+......
 ```
 
-解决问题的核心：**connect**
+
+
+> 验证网络联通性
+
+- 先创建四个容器。
+
+- 由于pull的tomcat镜像没有ping等命令，所以在每个容器中使用 apt安装ping命令
+
+1. 提出问题：对于不同网段的容器，是否可以联通无法联通的
+
+```shell
+[root@VM-24-12-centos ~]# docker exec -it tomcat01 ping tomcat-net-01
+ping: tomcat-net-01: Name or service not known
+
+# 说明：使用以上命令tomcat01不能ping通tomcat-net-01，
+# 因为tomcat01使用的网络模式是桥接，另一个使用了mynet模式。
+# 这两个网络模式的网关不同，对应了不同的网段。
+# 所以以上命令肯定无法联通
+```
+
+2. 解决思路：使用**connect**命令来联通容器和网络
 
 ![img](img/1640683971584-716020f5-2479-42b8-9ba5-082c13d0c10f.png)
 
-命令：
-
 ![img](img/1640684000499-6ebbbbe2-8517-48e5-8974-14ae3e9716b0.png)
 
+3. 解决问题：测试connect命令
+
 ```shell
-# 测试，打通 tomcat01 -> mynet
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker network connect mynet tomcat01
-# 连通之后，将tomcat01加入到 mynet 网络中
+# 使用connect命令打通 tomcat01 -> mynet
+[root@VM-24-12-centos ~]# docker network connect mynet tomcat01
+[root@VM-24-12-centos ~]# 
+
+# 使用inspect命令查看mynet网络。发现：连通之后，tomcat01加入到了 mynet 网络中
 # 一个容器两个ip地址！
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker network inspect mynet
-[
-    {
-        "Name": "mynet",
-        "Id": "d5fb9a4a2ae701f80d79ffb1046a7ac4eb55ab237d7a0c086abbd394c89f5beb",
-        "Created": "2021-12-28T17:19:59.608285274+08:00",
-        "Scope": "local",
-        "Driver": "bridge",
-        "EnableIPv6": false,
-        "IPAM": {
-            "Driver": "default",
-            "Options": {},
-            "Config": [
-                {
-                    "Subnet": "192.168.0.0/16",
-                    "Gateway": "192.168.0.1"
-                }
-            ]
-        },
-        "Internal": false,
-        "Attachable": false,
-        "Ingress": false,
-        "ConfigFrom": {
-            "Network": ""
-        },
-        "ConfigOnly": false,
+[root@VM-24-12-centos ~]# docker network inspect mynet
+......
         "Containers": {
-            "63a4d6ca7acc597df926ca9f4c2d9517c3712e55090abd51742d2523e26920a3": {
+            "520806ed718f1f3e52f15732182f0748585254a12d3d1d8d71ad80bc66895141": {
                 "Name": "tomcat-net-02",
-                "EndpointID": "ccf1ef6dd04d7ba743f2e73218c0d08a5ee5cefd33ee320da83bc828c18d4a47",
+                "EndpointID": "ef14c68185d627c1bcd9dc94f40905dd8f30fba4d7ff0abe2202d256dfdf4f1c",
                 "MacAddress": "02:42:c0:a8:00:03",
                 "IPv4Address": "192.168.0.3/16",
                 "IPv6Address": ""
             },
-            "a02d180005ee61d2c39448670d9ce5263af5745eb6ce1bb2ca3ccd67aab1299a": {
+            "5ef3f987bcfa33474eeefcc0407165497c07e07c5bfcd64fefe5f0be326a4e72": {
                 "Name": "tomcat-net-01",
-                "EndpointID": "5d07a53c9261a2ae006a77189a38ac1f411762dc7f1bd50cb8f3d65214246db9",
+                "EndpointID": "b27b6b87b95495d2ac0fa740c2bd4fb954445cf82191be209ea96075b304e794",
                 "MacAddress": "02:42:c0:a8:00:02",
                 "IPv4Address": "192.168.0.2/16",
                 "IPv6Address": ""
             },
-            "cd0bcbf7619fbf6f6d1f69b9c525daa810a4e2cb1af433e5e3c1612981670d18": {
+            "8773a1c04f644a275b2d7295acbe6425438765dccb981a96f2944fac00e6558b": {
                 "Name": "tomcat01",
-                "EndpointID": "76f992fdc4615f22971ac543f509dda0e41cfaf4859a8e4752bf4d35f8b5ff2a",
+                "EndpointID": "4d0e6634cefe17aa834a3ada32c458f9d2aab56f63dfb5b0d91e2ee4c1c91afb",
                 "MacAddress": "02:42:c0:a8:00:04",
                 "IPv4Address": "192.168.0.4/16",
                 "IPv6Address": ""
             }
         },
-        "Options": {},
-        "Labels": {}
-    }
-]
+......
 ```
 
 ![img](img/1640684176992-56c1324a-faa9-4f79-9538-7b7016102bb2.png)
 
-只能将容器与网络打通，无法将网络与网络打通。
+4. 联通测试：只能将容器与网络打通，无法将网络与网络打通。
 
 ```shell
-# 测试，tomcat01 打通 tomcat-net-02
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker exec -it tomcat01 ping tomcat-net-01
+# 测试发现，tomcat01 ping mynet网络下的任何一个子网都可以ping通
+[root@VM-24-12-centos ~]# docker exec -it tomcat01 ping tomcat-net-01
 PING tomcat-net-01 (192.168.0.2) 56(84) bytes of data.
-64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=1 ttl=64 time=0.068 ms
-64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=2 ttl=64 time=0.063 ms
+64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=1 ttl=64 time=0.058 ms
+64 bytes from tomcat-net-01.mynet (192.168.0.2): icmp_seq=2 ttl=64 time=0.037 ms
+......
+
+[root@VM-24-12-centos ~]# docker exec -it tomcat01 ping tomcat-net-02
+PING tomcat-net-02 (192.168.0.3) 56(84) bytes of data.
+64 bytes from tomcat-net-02.mynet (192.168.0.3): icmp_seq=1 ttl=64 time=0.081 ms
+64 bytes from tomcat-net-02.mynet (192.168.0.3): icmp_seq=2 ttl=64 time=0.043 ms
+......
+
+# 测试发现，tomcat02容器没有与mynet网络联通，所以无法ping通mynet网络中任意一个子网ip
+[root@VM-24-12-centos ~]# docker exec -it tomcat02 ping tomcat-net-02
+ping: tomcat-net-02: Name or service not known
 ```
 
-**结论：假设要跨网络操作，就需要使用 docker network connect 连通。**
+
+
+**结论：**
+
+**1. 假设要跨网络操作，就需要使用 docker network connect 连通。**
+
+**2. connect命令只能将容器与网络打通，无法将网络与网络打通。**
 
 
 
