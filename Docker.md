@@ -4139,8 +4139,10 @@ d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379@16379 master - 0 16484
 
 ### 9.6 SpringBoot微服务打包Docker镜像
 
-1. 构建springboot项目
-2. 打jar包
+> **这一节没有仔细看，复习完springboot后重新实践！   第39个视频**
+
+1. 构建springboot项目（这里省略）
+2. 打jar包（这里省略）
 3. 编写 dockerfile，将jar包和dockerfile同目录上传到服务器
 
 ```dockerfile
@@ -4151,13 +4153,13 @@ d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379@16379 master - 0 16484
  ENTRYPOINT ["java", "-jar", "/app.jar"]
 ```
 
-1. 构建镜像
+4. 构建镜像
 
 ```shell
 [sugar@iZ749i4volw5sfZ idea]$ docker build -t sugar666 .
 ```
 
-1. 发布运行
+5. 发布运行
 
 ```shell
 # 查看镜像
