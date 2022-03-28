@@ -3881,22 +3881,36 @@ ping: tomcat-net-02: Name or service not known
 
 
 
+
+
+ 
+
 ### 9.5 实战：部署Redis集群
 
-方案：分片模式，3台master，3台备用机，当master宕机后，备用机自动顶上。
+方案：分片模式，3台master，3台备用机，当master宕机后(图中的r-m3)，备用机(r-s3)自动顶上。(图中r-m表示三个主机，r-s表示三个从机，从机是主机的备份)
 
 ![img](img/1640684475702-c843ad12-144c-4cdc-9448-09187c264801.png)
 
 ```shell
-# 创建 redis 集群网卡
-[sugar@iZ749i4volw5sfZ docker-learn]$ docker network create redis --subnet 172.38.0.0/16
+# 1、创建 redis 集群网卡
+[root@VM-24-12-centos ~]# docker network create redis --subnet 172.38.0.0/16
+182349df2898ca67ab70f49abbdeb43818e7d0c75dcf283f7c2beef0d5e0d64d
+# 查看现有的网络，发现成功创建redis网络
+[root@VM-24-12-centos ~]# docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+0a4a5df8f19d   bridge    bridge    local
+29acff7962ab   host      host      local
+67acfc3403dd   mynet     bridge    local
+213bbc98bdf4   none      null      local
+182349df2898   redis     bridge    local
 
-# 通过脚本创建六个redis配置
+
+# 2、通过脚本创建六个redis配置(将下面这段脚本直接复制到Finalshell命令行中)
 for port in $(seq 1 6); \
 do \
-mkdir -p /home/sugar/dev/docker-learn/redis-cluster/node-${port}/conf
-touch /home/sugar/dev/docker-learn/redis-cluster/node-${port}/conf/redis.conf
-cat << EOF >/home/sugar/dev/docker-learn/redis-cluster/node-${port}/conf/redis.conf
+mkdir -p /home/docker-learning/redis-cluster/node-${port}/conf
+touch /home/docker-learning/redis-cluster/node-${port}/conf/redis.conf
+cat << EOF >/home/docker-learning/redis-cluster/node-${port}/conf/redis.conf
 port 6379
 bind 0.0.0.0
 cluster-enabled yes
@@ -3908,17 +3922,79 @@ cluster-announce-bus-port 16379
 appendonly yes
 EOF
 done
+# 查看集群创建目录发现已经成功创建了6个redis
+[root@VM-24-12-centos /]# cd /home/docker-learning/redis-cluster/
+[root@VM-24-12-centos redis-cluster]# ls
+node-1  node-2  node-3  node-4  node-5  node-6
+# 也可以查看每个redis中conf目录下的redis配置文件
 
-# 逐个启动redis
-docker run -p 6371:6379 -p 16371:16379 --name redis-1 \
--v /home/sugar/dev/docker-learn/redis-cluster/node-1/data:/data \
--v /home/sugar/dev/docker-learn/redis-cluster/node-1/conf/redis.conf:/etc/redis/redis.conf \
--d --net redis --ip 172.38.0.11 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
 
-# 创建 集群
-# 进入某个redis节点，配置集群  docker exec -it redis-1 /bin/sh，默认进入/data目录
-/data # redis-cli --cluster create 172.38.0.11:6379 172.38.0.12:6379 172.38.0.13:6379 172.38.0.1
-4:6379 172.38.0.15:6379 172.38.0.16:6379 --cluster-replicas 1
+# 3、逐个启动redis
+docker run -p 6376:6379 -p 16376:16379 --name redis-6 \
+-v /home/docker-learning/redis-cluster/node-6/data:/data \
+-v /home/docker-learning/redis-cluster/node-6/conf/redis.conf:/etc/redis/redis.conf \
+-d --net redis --ip 172.38.0.16 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+
+# 启动第一个
+[root@VM-24-12-centos redis-cluster]# docker run -p 6371:6379 -p 16371:16379 --name redis-1 \
+> -v /home/docker-learning/redis-cluster/node-1/data:/data \
+> -v /home/docker-learning/redis-cluster/node-1/conf/redis.conf:/etc/redis/redis.conf \
+> -d --net redis --ip 172.38.0.11 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+5eb76a26325fdee032fed0629fe9998819282b650fd82b2c27126ad9f81e013d
+
+# 启动第二个
+[root@VM-24-12-centos redis-cluster]# docker run -p 6372:6379 -p 16372:16379 --name redis-2 \
+> -v /home/docker-learning/redis-cluster/node-2/data:/data \
+> -v /home/docker-learning/redis-cluster/node-2/conf/redis.conf:/etc/redis/redis.conf \
+> -d --net redis --ip 172.38.0.12 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+a7a8777f75498b3509fa651418eb28052e86ee40678461021e9929c9b3a72640
+
+# 启动第三个
+[root@VM-24-12-centos redis-cluster]# docker run -p 6373:6379 -p 16373:16379 --name redis-3 \
+> -v /home/docker-learning/redis-cluster/node-3/data:/data \
+> -v /home/docker-learning/redis-cluster/node-3/conf/redis.conf:/etc/redis/redis.conf \
+> -d --net redis --ip 172.38.0.13 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+8c47444e640107d524dba1613fd4f4f8daeedf5c2df61bd359a47e1d0b2ca297
+
+# 启动第四个
+[root@VM-24-12-centos redis-cluster]# docker run -p 6374:6379 -p 16374:16379 --name redis-4 \
+> -v /home/docker-learning/redis-cluster/node-4/data:/data \
+> -v /home/docker-learning/redis-cluster/node-4/conf/redis.conf:/etc/redis/redis.conf \
+> -d --net redis --ip 172.38.0.14 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+2618a97fd9b9ddc32290137f9256d5added0f54f284c9fb03cdf90d1fa344300
+
+# 启动第五个
+[root@VM-24-12-centos redis-cluster]# docker run -p 6375:6379 -p 16375:16379 --name redis-5 \
+> -v /home/docker-learning/redis-cluster/node-5/data:/data \
+> -v /home/docker-learning/redis-cluster/node-5/conf/redis.conf:/etc/redis/redis.conf \
+> -d --net redis --ip 172.38.0.15 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+edfad6c4d3289de98595b58373ea4a8d6dc447d09e249c41c8604b0ffd68b133
+
+# 启动第六个
+[root@VM-24-12-centos redis-cluster]# docker run -p 6376:6379 -p 16376:16379 --name redis-6 \
+> -v /home/docker-learning/redis-cluster/node-6/data:/data \
+> -v /home/docker-learning/redis-cluster/node-6/conf/redis.conf:/etc/redis/redis.conf \
+> -d --net redis --ip 172.38.0.16 redis:5.0.9-alpine3.11 redis-server /etc/redis/redis.conf
+afe1e252affa7bca7af1c5c67f1cc05a88315a4ef1f0173d77031f6709355215
+
+# 查看此时所有的容器
+[root@VM-24-12-centos redis-cluster]# docker ps
+CONTAINER ID   IMAGE                    COMMAND                  CREATED              STATUS              PORTS                                                                                      NAMES
+afe1e252affa   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   40 seconds ago       Up 39 seconds       0.0.0.0:6376->6379/tcp, :::6376->6379/tcp, 0.0.0.0:16376->16379/tcp, :::16376->16379/tcp   redis-6
+edfad6c4d328   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   About a minute ago   Up About a minute   0.0.0.0:6375->6379/tcp, :::6375->6379/tcp, 0.0.0.0:16375->16379/tcp, :::16375->16379/tcp   redis-5
+a7a8777f7549   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   2 minutes ago        Up 2 minutes        0.0.0.0:6372->6379/tcp, :::6372->6379/tcp, 0.0.0.0:16372->16379/tcp, :::16372->16379/tcp   redis-2
+2618a97fd9b9   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   3 minutes ago        Up 3 minutes        0.0.0.0:6374->6379/tcp, :::6374->6379/tcp, 0.0.0.0:16374->16379/tcp, :::16374->16379/tcp   redis-4
+8c47444e6401   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   4 minutes ago        Up 4 minutes        0.0.0.0:6373->6379/tcp, :::6373->6379/tcp, 0.0.0.0:16373->16379/tcp, :::16373->16379/tcp   redis-3
+5eb76a26325f   redis:5.0.9-alpine3.11   "docker-entrypoint.s…"   5 minutes ago        Up 5 minutes        0.0.0.0:6371->6379/tcp, :::6371->6379/tcp, 0.0.0.0:16371->16379/tcp, :::16371->16379/tcp   redis-1
+
+
+
+
+
+# 4、创建 集群
+# 进入某个redis节点，配置集群  docker exec -it redis-1 /bin/sh，默认进入/data目录（redis中没有bash，只有sh）
+[root@VM-24-12-centos redis-cluster]# docker exec -it redis-1 /bin/sh
+/data # redis-cli --cluster create 172.38.0.11:6379 172.38.0.12:6379 172.38.0.13:6379 172.38.0.14:6379 172.38.0.15:6379 172.38.0.16:6379 --cluster-replicas 1
 >>> Performing hash slots allocation on 6 nodes...
 Master[0] -> Slots 0 - 5460
 Master[1] -> Slots 5461 - 10922
@@ -3926,55 +4002,83 @@ Master[2] -> Slots 10923 - 16383
 Adding replica 172.38.0.15:6379 to 172.38.0.11:6379
 Adding replica 172.38.0.16:6379 to 172.38.0.12:6379
 Adding replica 172.38.0.14:6379 to 172.38.0.13:6379
-M: f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379
+M: d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379
    slots:[0-5460] (5461 slots) master
-M: d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379
+M: 791de9ebf12f58dd38945e67302d5448929e02dc 172.38.0.12:6379
    slots:[5461-10922] (5462 slots) master
-M: 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379
+M: 5f83ec8300993cfececfaa6a8b1d69052583fc2d 172.38.0.13:6379
    slots:[10923-16383] (5461 slots) master
-S: eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379
-   replicates 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf
-S: 09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379
-   replicates f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032
-S: b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379
-   replicates d82e3c2a745fdc05c7f94eba404a025d79369c94
+S: c7a21a20c62efd056d137c6fa575a33da2929b32 172.38.0.14:6379
+   replicates 5f83ec8300993cfececfaa6a8b1d69052583fc2d
+S: 7000a6b1f5914eacb01cd1a41f0bc1d6c83e2dbb 172.38.0.15:6379
+   replicates d4c9579400f0f7531f27640a93e7e27a7cbde9de
+S: 8ba8f0bac512478bc72c71201a48b7f3fac803f2 172.38.0.16:6379
+   replicates 791de9ebf12f58dd38945e67302d5448929e02dc
 Can I set the above configuration? (type 'yes' to accept): yes
 >>> Nodes configuration updated
 >>> Assign a different config epoch to each node
 >>> Sending CLUSTER MEET messages to join the cluster
 Waiting for the cluster to join
-....
+...
 >>> Performing Cluster Check (using node 172.38.0.11:6379)
-M: f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379
+M: d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379
    slots:[0-5460] (5461 slots) master
    1 additional replica(s)
-M: d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379
-   slots:[5461-10922] (5462 slots) master
-   1 additional replica(s)
-M: 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379
+S: 7000a6b1f5914eacb01cd1a41f0bc1d6c83e2dbb 172.38.0.15:6379
+   slots: (0 slots) slave
+   replicates d4c9579400f0f7531f27640a93e7e27a7cbde9de
+S: c7a21a20c62efd056d137c6fa575a33da2929b32 172.38.0.14:6379
+   slots: (0 slots) slave
+   replicates 5f83ec8300993cfececfaa6a8b1d69052583fc2d
+S: 8ba8f0bac512478bc72c71201a48b7f3fac803f2 172.38.0.16:6379
+   slots: (0 slots) slave
+   replicates 791de9ebf12f58dd38945e67302d5448929e02dc
+M: 5f83ec8300993cfececfaa6a8b1d69052583fc2d 172.38.0.13:6379
    slots:[10923-16383] (5461 slots) master
    1 additional replica(s)
-S: eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379
+M: 791de9ebf12f58dd38945e67302d5448929e02dc 172.38.0.12:6379
+   slots:[5461-10922] (5462 slots) master
+   1 additional replica(s)
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+>>> Nodes configuration updated
+>>> Assign a different config epoch to each node
+>>> Sending CLUSTER MEET messages to join the cluster
+Waiting for the cluster to join
+...
+>>> Performing Cluster Check (using node 172.38.0.11:6379)
+M: d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379
+   slots:[0-5460] (5461 slots) master
+   1 additional replica(s)
+S: 7000a6b1f5914eacb01cd1a41f0bc1d6c83e2dbb 172.38.0.15:6379
    slots: (0 slots) slave
-   replicates 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf
-S: 09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379
+   replicates d4c9579400f0f7531f27640a93e7e27a7cbde9de
+S: c7a21a20c62efd056d137c6fa575a33da2929b32 172.38.0.14:6379
    slots: (0 slots) slave
-   replicates f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032
-S: b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379
+   replicates 5f83ec8300993cfececfaa6a8b1d69052583fc2d
+S: 8ba8f0bac512478bc72c71201a48b7f3fac803f2 172.38.0.16:6379
    slots: (0 slots) slave
-   replicates d82e3c2a745fdc05c7f94eba404a025d79369c94
+   replicates 791de9ebf12f58dd38945e67302d5448929e02dc
+M: 5f83ec8300993cfececfaa6a8b1d69052583fc2d 172.38.0.13:6379
+   slots:[10923-16383] (5461 slots) master
+   1 additional replica(s)
+M: 791de9ebf12f58dd38945e67302d5448929e02dc 172.38.0.12:6379
+   slots:[5461-10922] (5462 slots) master
+   1 additional replica(s)
 [OK] All nodes agree about slots configuration.
 >>> Check for open slots...
 >>> Check slots coverage...
 [OK] All 16384 slots covered.
 ```
 
-测试Redis集群高可用
+经过以上步骤，redis集群就创建好了。下面测试Redis集群高可用：
 
 ```shell
 # 查看集群信息，注意 -c 才是集群登录，不加-c是单机登录
-/data # redis-cli -c 
-127.0.0.1:6379> cluster info
+/data # redis-cli -c
+127.0.0.1:6379> cluster info            【看信息】
 cluster_state:ok
 cluster_slots_assigned:16384
 cluster_slots_ok:16384
@@ -3984,47 +4088,54 @@ cluster_known_nodes:6
 cluster_size:3
 cluster_current_epoch:6
 cluster_my_epoch:1
-cluster_stats_messages_ping_sent:242
-cluster_stats_messages_pong_sent:239
-cluster_stats_messages_sent:481
-cluster_stats_messages_ping_received:234
-cluster_stats_messages_pong_received:242
+cluster_stats_messages_ping_sent:267
+cluster_stats_messages_pong_sent:266
+cluster_stats_messages_sent:533
+cluster_stats_messages_ping_received:261
+cluster_stats_messages_pong_received:267
 cluster_stats_messages_meet_received:5
-cluster_stats_messages_received:481
-127.0.0.1:6379> cluster nodes
-d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379@16379 master - 0 1640686826062 2 connected 5461-10922
-0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379@16379 master - 0 1640686825000 3 connected 10923-16383
-f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379@16379 myself,master - 0 1640686826000 1 connected 0-5460
-eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379@16379 slave 0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 0 1640686826000 4 connected
-09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379@16379 slave f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 0 1640686826862 5 connected
-b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379@16379 slave d82e3c2a745fdc05c7f94eba404a025d79369c94 0 1640686825862 6 connected
+cluster_stats_messages_received:533
+127.0.0.1:6379> cluster nodes            【看节点】
+7000a6b1f5914eacb01cd1a41f0bc1d6c83e2dbb 172.38.0.15:6379@16379 slave d4c9579400f0f7531f27640a93e7e27a7cbde9de 0 1648460971844 5 connected
+c7a21a20c62efd056d137c6fa575a33da2929b32 172.38.0.14:6379@16379 slave 5f83ec8300993cfececfaa6a8b1d69052583fc2d 0 1648460972846 4 connected
+8ba8f0bac512478bc72c71201a48b7f3fac803f2 172.38.0.16:6379@16379 slave 791de9ebf12f58dd38945e67302d5448929e02dc 0 1648460972000 6 connected
+5f83ec8300993cfececfaa6a8b1d69052583fc2d 172.38.0.13:6379@16379 master - 0 1648460971000 3 connected 10923-16383
+d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379@16379 myself,master - 0 1648460971000 1 connected 0-5460
+791de9ebf12f58dd38945e67302d5448929e02dc 172.38.0.12:6379@16379 master - 0 1648460971543 2 connected 5461-10922
 
 # 添加key，定向到13这台master
 127.0.0.1:6379> set a b
 -> Redirected to slot [15495] located at 172.38.0.13:6379
 OK
+172.38.0.13:6379> 
 
-# 为了测试高可用，将13这台redis停掉
-[sugar@iZ749i4volw5sfZ redis-cluster]$ docker stop redis-3
+# 为了测试高可用，在一个新的窗口中将172.38.0.13这台redis停掉
+[root@VM-24-12-centos ~]# docker stop redis-3
+redis-3
 
-# 再次获取 key
+# 再次获取 key a 对应的值：
+# 可以看到，即使13这台redis被停了，14这台备用redis自动顶上了，证明了集群的高可用性【解释：13这个容器停了，但是14是13的从机，所以此时仍然可以从14中得到key a对应的值b】
 /data # redis-cli -c
 127.0.0.1:6379> get a
 -> Redirected to slot [15495] located at 172.38.0.14:6379
 "b"
 
-# 可以看到，即使13这台redis被停了，14这台备用redis自动顶上了，证明了集群的高可用性
-
 # 重新查看集群节点信息
-# 可见 13 master fail，master转移到 14
+# 可见 "13 master fail，master",说明转移到 14上了
 172.38.0.14:6379> cluster nodes
-b351231aabd5328d9a7e9f8a13f29acf0c483cd9 172.38.0.16:6379@16379 slave d82e3c2a745fdc05c7f94eba404a025d79369c94 0 1640687132344 6 connected
-eec83f149a6c91d0d66d1d4cbec8ce9fc12f0f7f 172.38.0.14:6379@16379 myself,master - 0 1640687130000 7 connected 10923-16383
-d82e3c2a745fdc05c7f94eba404a025d79369c94 172.38.0.12:6379@16379 master - 0 1640687131000 2 connected 5461-10922
-09590d4d7a0685ed72386f3a2415f481ac0ee84e 172.38.0.15:6379@16379 slave f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 0 1640687131343 5 connected
-f2f7f1f6d2df8e21cfb585a0ef5ba0446fb49032 172.38.0.11:6379@16379 master - 0 1640687131000 1 connected 0-5460
-0c67dbc04019dbd72d8c9cc6cbc6100078f560bf 172.38.0.13:6379@16379 master,fail - 1640687040367 1640687038855 3 connected
+791de9ebf12f58dd38945e67302d5448929e02dc 172.38.0.12:6379@16379 master - 0 1648461430000 2 connected 5461-10922
+5f83ec8300993cfececfaa6a8b1d69052583fc2d 172.38.0.13:6379@16379 master,fail - 1648461145921 1648461145420 3 connected
+7000a6b1f5914eacb01cd1a41f0bc1d6c83e2dbb 172.38.0.15:6379@16379 slave d4c9579400f0f7531f27640a93e7e27a7cbde9de 0 1648461429582 5 connected
+c7a21a20c62efd056d137c6fa575a33da2929b32 172.38.0.14:6379@16379 myself,master - 0 1648461430000 7 connected 10923-16383
+d4c9579400f0f7531f27640a93e7e27a7cbde9de 172.38.0.11:6379@16379 master - 0 1648461430985 1 connected 0-5460
+8ba8f0bac512478bc72c71201a48b7f3fac803f2 172.38.0.16:6379@16379 slave 791de9ebf12f58dd38945e67302d5448929e02dc 0 1648461430000 6 connected
 ```
+
+
+
+
+
+
 
 ### 9.6 SpringBoot微服务打包Docker镜像
 
@@ -4077,6 +4188,10 @@ Hello world.
 **如果有很多很多镜像？？**
 
 
+
+
+
+------
 
 ## 十、Docker Compose
 
